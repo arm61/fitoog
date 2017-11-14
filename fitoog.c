@@ -110,22 +110,22 @@ void InitialiseJob(struct Job *jobDetails, int numInputs, struct CharPair input[
 
 void initialiseKeywords(int numInput, struct CharPair input[numInput])
 {
-    strncpy(input[0].Label, "name", sizeof("name"));
-    strncpy(input[0].Keyword, "fitoog_run", sizeof("fitoog_run"));
-    strncpy(input[1].Label, "num_molecules", sizeof("num_molecules"));
-    strncpy(input[1].Keyword, "1", sizeof("1"));
-    strncpy(input[2].Label, "restart", sizeof("restart"));
-    strncpy(input[2].Keyword, "no", sizeof("no"));
-    strncpy(input[3].Label, "cell", sizeof("name"));
-    strncpy(input[3].Keyword, "100", sizeof("100"));
-    strncpy(input[4].Label, "num_data", sizeof("num_data"));
-    strncpy(input[4].Keyword, "1", sizeof("1"));
-    strncpy(input[5].Label, "golden_vectors", sizeof("golden_vectors"));
-    strncpy(input[5].Keyword, "30", sizeof("30"));
-    strncpy(input[6].Label, "pop_size", sizeof("golden_vectors"));
-    strncpy(input[6].Keyword, "360", sizeof("30"));
-    strncpy(input[7].Label, "num_steps", sizeof("golden_vectors"));
-    strncpy(input[7].Keyword, "10", sizeof("30"));
+    strncpy(input[0].label, "name", sizeof("name"));
+    strncpy(input[0].keyword, "fitoog_run", sizeof("fitoog_run"));
+    strncpy(input[1].label, "num_molecules", sizeof("num_molecules"));
+    strncpy(input[1].keyword, "1", sizeof("1"));
+    strncpy(input[2].label, "restart", sizeof("restart"));
+    strncpy(input[2].keyword, "no", sizeof("no"));
+    strncpy(input[3].label, "cell", sizeof("name"));
+    strncpy(input[3].keyword, "100", sizeof("100"));
+    strncpy(input[4].label, "num_data", sizeof("num_data"));
+    strncpy(input[4].keyword, "1", sizeof("1"));
+    strncpy(input[5].label, "golden_vectors", sizeof("golden_vectors"));
+    strncpy(input[5].keyword, "30", sizeof("30"));
+    strncpy(input[6].label, "pop_size", sizeof("golden_vectors"));
+    strncpy(input[6].keyword, "360", sizeof("30"));
+    strncpy(input[7].label, "num_steps", sizeof("golden_vectors"));
+    strncpy(input[7].keyword, "10", sizeof("30"));
 }
 
 int main(int argc, char *argv[])
