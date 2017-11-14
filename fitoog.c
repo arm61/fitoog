@@ -148,4 +148,5 @@ int main(int argc, char *argv[])
 
     initialiseKeywords(numInput, input);
     printf("Successful");
+    MPI_Finialize();
 }
