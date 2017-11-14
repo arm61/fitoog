@@ -128,6 +128,15 @@ void initialiseKeywords(int numInput, struct CharPair input[numInput])
     strncpy(input[7].keyword, "10", sizeof("30"));
 }
 
+MPI_Comm mpstart(int *nProcs, int *rank)
+{
+    MPI_Init(NULL, NULL);
+    MPI_Comm comm = MPI_COMM_WORLD;
+    MPI_Comm_size(comm, nProcs);
+    MPI_Comm_rank(comm, rank);
+    return comm;
+}
+
 int main(int argc, char *argv[])
 {
     int rank, nProcs;
@@ -137,5 +146,5 @@ int main(int argc, char *argv[])
     int numInput = 7;
     struct CharPair input[numInput];
 
-    InitialiseKeywords(numInput, input);
+    initialiseKeywords(numInput, input);
 }
