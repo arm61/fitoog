@@ -198,6 +198,10 @@ int main(int argc, char *argv[])
 
     initialiseKeywords(numInput, input);
     readInputFile(numInput, input);
+
+    struct Job jobDetails;
+    InitialiseJob(&jobDetails, numInput, input, nProcs);
+
     printf("Successful\n");
     MPI_Finalize();
 }
