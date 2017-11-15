@@ -264,6 +264,7 @@ void ReadInDataInfo(char line[512], int numData, int maxDataLength, struct ExpDa
                     int i)
 {
     int j = 0;
+    int maxj = 0;
     char *str;
     str = strtok(line, ",");
     while (str != NULL)
@@ -282,16 +283,18 @@ void ReadInDataInfo(char line[512], int numData, int maxDataLength, struct ExpDa
         }
         if (j == 3)
         {
-            data[i][k].dq = stof(str);
+            data[i][k].dq = atof(str);
         }
+        maxj = j;
         j++;
         str = strtok(NULL, ",");
     }
-    if (data[i][k].di == NULL)
+    if (maxj == 1)
     {
         data[i][k].di = data[i][k].i * 0.05;
+        data[i][k].dq = data[i][k].q * 0.05;
     }
-    if (data[i][k].dq == NULL)
+    if (maxj == 2)
     {
         data[i][k].dq = data[i][k].q * 0.05;
         printf("it has worked");
@@ -311,8 +314,10 @@ void GetDataPoints(int numData, int maxDataLength, struct ExpData data[numData][
         int k = 0;
         while (fgets(line, sizeof(line), dataFile))
         {
-
+            ReadInDataInfo(line, numData, maxDataLength, data, k, i);
+            k++;
         }
+        fclose(dataFile);
     }
 }
 
