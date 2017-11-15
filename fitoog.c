@@ -211,6 +211,39 @@ void InitialiseAndRead(int numMolecules, struct CharPair molTypeLoc[numMolecules
     ReadInputFile(numMolecules, molTypeLoc);
 }
 
+void GetFileLengths(int numFiles, int itemLengths[numFiles], struct CharPair itemType[numFiles])
+{
+    int i;
+    for (i = 0; i < numFiles; i++)
+    {
+        FILE *inputFile;
+        inputFile = fopen(itemType[i].keyword, "r");
+        CheckFileExists(inputFile, itemType[i].keyword);
+        char line[100];
+        int j = 0;
+        while (fgets(line, sizeof(line), inputFile))
+        {
+            j++;
+        }
+        itemLengths[i] = j;
+        fclose(inputFile);
+    }
+}
+
+int FindMaxInt(int length, int array[length])
+{
+    int i;
+    int max = 0;
+    for (i = 0; i < length; i++)
+    {
+        if (array[i] > max)
+        {
+            max = array[i];
+        }
+    }
+    return max;
+}
+
 MPI_Comm mpstart(int *nProcs, int *rank)
 {
     MPI_Init(NULL, NULL);
@@ -243,6 +276,12 @@ int main(int argc, char *argv[])
     int numMolecules = jobDetails.numberMoleculeTypes;
     struct CharPair molTypes[numMolecules];
     InitialiseAndRead(numMolecules, molTypes, "molecule");
+
+    int molLengths[numMolecules];
+    GetFileLengths(numMolecules, molLengths, molTypes);
+    int maxMolLength = FindMaxInt(numMolecules, molLengths);
+
+
 
     printf("Successful\n");
     MPI_Finalize();
