@@ -149,7 +149,7 @@ void UpdateOutput(int numcPair, struct CharPair cPair[numcPair], char line[100],
     const char wipe[50] = "                                                  ";
     strncpy(cPair[i].keyword, wipe, 50);
     strncpy(cPair[i].keyword, FirstCharAfterSpace(line), 50);
-    ctrcat(cPair[i].keyword, "\0");
+    strcat(cPair[i].keyword, "\0");
 }
 
 void FindUpdateOutput(int numcPair, struct CharPair cPair[numcPair], char line[100])
