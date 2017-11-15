@@ -297,7 +297,6 @@ void ReadInDataInfo(char line[512], int numData, int maxDataLength, struct ExpDa
     if (maxj < 3)
     {
         data[i][k].dq = data[i][k].q * 0.05;
-        printf("it has worked");
     }
 }
 
@@ -318,6 +317,61 @@ void GetDataPoints(int numData, int maxDataLength, struct ExpData data[numData][
             k++;
         }
         fclose(dataFile);
+    }
+}
+
+void ReadInAtomInfo(char line[512], int numMolecules, int maxMolLength, struct Atom readMols[numMolecules][maxMolLength], int k, int i, int numData)
+{
+    int j = 0;
+    char *str;
+    str strtok(line, " ");
+    while (str != NULL)
+    {
+        if (j == 0)
+        {
+            strncpy(readMols[i][k].label, str, 3);
+        }
+        if (j == 1)
+        {
+            readMols[i][k].xpos = atof(str);
+        }
+        if (j == 2)
+        {
+            readMols[i][k].ypos = atof(str);
+        }
+        if (j == 3)
+        {
+            readMols[i][k].zpos = atof(str);
+        }
+        int r;
+        for (r = 0; r < numData; r++)
+        {
+            if (j == r + 4)
+            {
+                readMols[i][k].scatLen[r] = atof(str);
+            }
+        }
+        j++;
+        str = strtok(NULL, " ");
+    }
+}
+
+void GetAtomPositions(int numMolecules, int maxMolLength, struct Atom readMols[numMolecules][maxMolLength], struct CharPair molTypes[numMolecules], int numData)
+{
+    int i;
+    for (i = 0; i < numMolecules; i++)
+    {
+        FILE *inputFile;
+        inputFile = fopen(molTypes[i].keyword, "r");
+        CheckFileExists(inputFile, molTypes[i].keyword);
+        char line[512];
+        int k = 0;
+        while (fgets(line, sizeof(line), inputFile))
+        {
+            ReadInAtomInfo(line, numMolecules, maxMolLength, readMols, k, i, numData);
+            k++;
+        }
+        fclose(inputFile);
     }
 }
 
@@ -374,6 +428,8 @@ int main(int argc, char *argv[])
     struct ExpData simData[numData][maxDataLength];
     GetDataPoints(numData, maxDataLength, data, dataTypes);
 
+    struct Atom readMols[numMolecules][maxMolLength];
+    GetAtomPositions(numMolecules, maxMolLength, readMols, molTypes, numData);
 
     printf("Successful\n");
     MPI_Finalize();
