@@ -289,12 +289,12 @@ void ReadInDataInfo(char line[512], int numData, int maxDataLength, struct ExpDa
         j++;
         str = strtok(NULL, ",");
     }
-    if (maxj == 1)
+    if (maxj < 2)
     {
         data[i][k].di = data[i][k].i * 0.05;
         data[i][k].dq = data[i][k].q * 0.05;
     }
-    if (maxj == 2)
+    if (maxj < 3)
     {
         data[i][k].dq = data[i][k].q * 0.05;
         printf("it has worked");
