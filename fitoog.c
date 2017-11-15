@@ -191,7 +191,7 @@ void CopyMoleculeLabels(char label[50], char id[50], int i)
 {
     strncpy(label, id, 50);
     char str[50];
-    itoa(i, str);
+    sprintf(str, "%d", i);
     strcat(label, str);
     strcat(label, "\0");
 }
