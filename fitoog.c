@@ -147,6 +147,6 @@ int main(int argc, char *argv[])
     struct CharPair input[numInput];
 
     initialiseKeywords(numInput, input);
-    printf("Successful");
+    printf("Successful\n");
     MPI_Finalize();
 }
