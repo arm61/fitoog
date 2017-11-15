@@ -324,7 +324,7 @@ void ReadInAtomInfo(char line[512], int numMolecules, int maxMolLength, struct A
 {
     int j = 0;
     char *str;
-    str strtok(line, " ");
+    str = strtok(line, " ");
     while (str != NULL)
     {
         if (j == 0)
