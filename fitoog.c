@@ -165,7 +165,7 @@ void FindUpdateOutput(int numcPair, struct CharPair cPair[numcPair], char line[1
     }
 }
 
-void readInputFile(int numcPair, struct CharPair cPair[numcPair])
+void ReadInputFile(int numcPair, struct CharPair cPair[numcPair])
 {
     FILE *inputfile;
     inputfile = fopen("fitoog.inp", "r");
@@ -176,6 +176,39 @@ void readInputFile(int numcPair, struct CharPair cPair[numcPair])
         FindUpdateOutput(numcPair, cPair, line);
     }
     fclose(inputfile);
+}
+
+void MakeCell(int numcPair, struct CharPair cPair[numcPair], float cell[3])
+{
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+        cell[i] = atof(cPair[3].keyword);
+    }
+}
+
+void CopyMoleculeLabels(char label[50], char id[50], int i)
+{
+    strncpy(label, id, 50);
+    char str[50];
+    itos(i, str);
+    strcat(label, str);
+    strcat(label, "\0");
+}
+
+void InitialiseMoleculeNames(int numMolecules, struct CharPair molTypeLoc[numMolecules], char id[50])
+{
+    int i;
+    for (i = 0; i < numMolecules; i++)
+    {
+        CopyMoleculeLabels(molTypeLoc[i].label, id, i);
+    }
+}
+
+void InitialiseAndRead(int numMolecules, struct CharPair molTypeLoc[numMolecules], char id[50])
+{
+    InitialiseMoleculeNames(numMolecules, molTypeLoc, id);
+    ReadInputFile(numMolecules, molTypeLoc);
 }
 
 MPI_Comm mpstart(int *nProcs, int *rank)
@@ -197,10 +230,19 @@ int main(int argc, char *argv[])
     struct CharPair input[numInput];
 
     initialiseKeywords(numInput, input);
-    readInputFile(numInput, input);
+    ReadInputFile(numInput, input);
 
     struct Job jobDetails;
     InitialiseJob(&jobDetails, numInput, input, nProcs);
+
+    float cell[3];
+    MakeCell(numInput, input, cell);
+
+    int goldenVectors = jobDetails.goldenVectors;
+
+    int numMolecules = jobDetails.numberMoleculeTypes;
+    struct CharPair molTypes[numMolecules];
+    InitialiseAndRead(numMolecules, molTypes, "molecule");
 
     printf("Successful\n");
     MPI_Finalize();
