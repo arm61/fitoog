@@ -128,6 +128,56 @@ void initialiseKeywords(int numInput, struct CharPair input[numInput])
     strncpy(input[7].keyword, "10", sizeof("30"));
 }
 
+void CheckFileExists(FILE *file, char *fileName)
+{
+    if (file == NULL)
+    {
+        printf("The %s file could not be found, as a result fitoog has quit.\n", fileName);
+        exit(EXIT_FAILURE);
+    }
+}
+
+char *FindWordInLine(char line[100], char word[50])
+{
+    char *found;
+    found = strstr(line, word);
+    return found;
+}
+
+void UpdateOutput(int numcPair, struct CharPair cPair[numcPair], char line[100], int i)
+{
+    const char wipe[50] = "                                                  ";
+    strncpy(cPair[i].keyword, wipe, 50);
+    strncpy(cPair[i].keyword, FirstCharAfterSpace(line), 50);
+    ctrcat(cPair[i].keyword, "\0");
+}
+
+void FindUpdateOutput(int numcPair, struct CharPair cPair[numcPair], char line[100])
+{
+    int i;
+    for (i = 0; i < numcPair; i++)
+    {
+        char *found = FindWordInLine(line, cPair[i].label);
+        if (found != NULL)
+        {
+            UpdateOutput(numcPair, cPair, line, i);
+        }
+    }
+}
+
+void readInputFile(int numcPair, struct CharPair cPair[numcPair])
+{
+    FILE *inputfile;
+    inputfile = fopen("fitoog.inp", "r");
+    CheckFileExists(inputfile, "fitoog.inp");
+    char line[100];
+    while(fgets(line, sizeof(line), inputfile))
+    {
+        FindUpdateOutput(numcPair, cPair, line);
+    }
+    fclose(inputfile);
+}
+
 MPI_Comm mpstart(int *nProcs, int *rank)
 {
     MPI_Init(NULL, NULL);
@@ -147,6 +197,7 @@ int main(int argc, char *argv[])
     struct CharPair input[numInput];
 
     initialiseKeywords(numInput, input);
+    readInputFile(numInput, input);
     printf("Successful\n");
     MPI_Finalize();
 }
