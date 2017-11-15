@@ -51,6 +51,7 @@ struct ExpData
     float q;
     float i;
     float di;
+    float dq;
 };
 
 char *FirstCharAfterSpace(char *input)
@@ -244,6 +245,77 @@ int FindMaxInt(int length, int array[length])
     return max;
 }
 
+int FindMaxCharPair(int length, struct CharPair array[length])
+{
+    int i;
+    int max = 0;
+    for (i = 0; i < length; i++)
+    {
+        float num = atof(array[i].keyword);
+        if (num > max)
+        {
+            max = num;
+        }
+    }
+    return max;
+}
+
+void ReadInDataInfo(char line[512], int numData, int maxDataLength, struct ExpData data[numData][maxDataLength], int k,
+                    int i)
+{
+    int j = 0;
+    char *str;
+    str = strtok(line, ",");
+    while (str != NULL)
+    {
+        if (j == 0)
+        {
+            data[i][k].q = atof(str);
+        }
+        if (j == 1)
+        {
+            data[i][k].i = atof(str);
+        }
+        if (j == 2)
+        {
+            data[i][k].di = atof(str);
+        }
+        if (j == 3)
+        {
+            data[i][k].dq = stof(str);
+        }
+        j++;
+        str = strtok(NULL, ",");
+    }
+    if (data[i][k].di == NULL)
+    {
+        data[i][k].di = data[i][k].i * 0.05;
+    }
+    if (data[i][k].dq == NULL)
+    {
+        data[i][k].dq = data[i][k].q * 0.05;
+        printf("it has worked");
+    }
+}
+
+void GetDataPoints(int numData, int maxDataLength, struct ExpData data[numData][maxDataLength],
+                   struct CharPair dataTypes[numData])
+{
+    int i;
+    for (i = 0; i < numData; i++)
+    {
+        FILE *dataFile;
+        dataFile = fopen(dataTypes[i].keyword, "r");
+        CheckFileExists(dataFile, dataTypes[i].keyword);
+        char line[512];
+        int k = 0;
+        while (fgets(line, sizeof(line), dataFile))
+        {
+
+        }
+    }
+}
+
 MPI_Comm mpstart(int *nProcs, int *rank)
 {
     MPI_Init(NULL, NULL);
@@ -281,6 +353,20 @@ int main(int argc, char *argv[])
     GetFileLengths(numMolecules, molLengths, molTypes);
     int maxMolLength = FindMaxInt(numMolecules, molLengths);
 
+    struct CharPair molNums[numMolecules];
+    InitialiseAndRead(numMolecules, molNums, "num_mole");
+    int maxMolNum = FindMaxCharPair(numMolecules, molNums);
+
+    int numData = jobDetails.numberScatteringData;
+    struct CharPair dataTypes[numData];
+    InitialiseAndRead(numData, dataTypes, "data");
+
+    int dataLengths[numData];
+    GetFileLengths(numData, dataLengths, dataTypes);
+    int maxDataLength = FindMaxInt(numData, dataLengths);
+
+    struct ExpData data[numData][maxDataLength];
+    struct ExpData simData[numData][maxDataLength];
 
 
     printf("Successful\n");
