@@ -372,6 +372,7 @@ int main(int argc, char *argv[])
 
     struct ExpData data[numData][maxDataLength];
     struct ExpData simData[numData][maxDataLength];
+    GetDataPoints(numData, maxDataLength, data, dataTypes);
 
 
     printf("Successful\n");
