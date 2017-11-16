@@ -266,7 +266,7 @@ void ReadInDataInfo(char line[512], int numData, int maxDataLength, struct ExpDa
     int j = 0;
     int maxj = 0;
     char *str;
-    str = strtok(line, ",");
+    str = strtok(line, " ");
     while (str != NULL)
     {
         if (j == 0)
@@ -459,6 +459,156 @@ void MakePopulation(int populationSize, int numMolecules, int maxMolNum,
     }
 }
 
+void RotationMatrix(float x, float y, float z, float rm[3][3]){
+    rm[0][0] = cos(x) * cos(y) * cos(z) - sin(x) * sin(z);
+    rm[0][1] = -cos(x) * cos(y) * sin(z) - sin(x) * cos(z);
+    rm[0][2] = cos(x) * sin(y);
+    rm[1][0] = sin(x) * cos(y) * cos(z) + cos(x) * sin(z);
+    rm[1][1] = -sin(x) * cos(y) * sin(z) + cos(x) * cos(z);
+    rm[1][2] = sin(x) * sin(y);
+    rm[2][0] = -sin(y) * cos(z);
+    rm[2][1] = sin(y) * sin(z);
+    rm[2][2] = cos(y);
+}
+
+void ConvertToAtomic(int numMolecules, int maxMolNum, struct CharPair molNums[numMolecules], int maxMolLength,
+                     int molLengths[numMolecules], struct Atom differences[numMolecules][maxMolNum][maxMolLength],
+                     struct Atom atomic[numMolecules][maxMolNum][maxMolLength],
+                     struct PosAng positions[numMolecules][maxMolNum], int numData){
+    int i;
+    for (i = 0; i < numMolecules; i++){
+        int j;
+        for (j = 0; j < atoi(molNums[i].keyword); j++){
+            float rm[3][3];
+            RotationMatrix(positions[i][j].angle[0], positions[i][j].angle[1], positions[i][j].angle[2], rm);
+            int k;
+            for (k = 0; k < molLengths[i]; k++){
+                strncpy(atomic[i][j][k].label, differences[i][j][k].label, 3);
+                atomic[i][j][k].xpos = positions[i][j].position[0] - differences[i][j][k].xpos;
+                atomic[i][j][k].ypos = positions[i][j].position[1] - differences[i][j][k].ypos;
+                atomic[i][j][k].zpos = positions[i][j].position[2] - differences[i][j][k].zpos;
+                int r = 0;
+                for (r = 0; r < numData; r++){
+                    atomic[i][j][k].scatLen[r] = differences[i][j][k].scatLen[r];
+                }
+            }
+            struct Atom other[molLengths[i]];
+            for (k = 0; k < molLengths[i]; k++) {
+                other[k].xpos = atomic[i][j][k].xpos - positions[i][j].position[0];
+                other[k].ypos = atomic[i][j][k].ypos - positions[i][j].position[1];
+                other[k].zpos = atomic[i][j][k].zpos - positions[i][j].position[2];
+            }
+            struct Atom another[molLengths[i]];
+            for (k = 0; k < molLengths[i]; k++){
+                another[k].xpos = rm[0][0] * other[k].xpos + rm[0][1] * other[k].ypos + rm[0][2] * other[k].zpos;
+                another[k].ypos = rm[1][0] * other[k].xpos + rm[1][1] * other[k].ypos + rm[1][2] * other[k].zpos;
+                another[k].ypos = rm[2][0] * other[k].xpos + rm[2][1] * other[k].ypos + rm[2][2] * other[k].zpos;
+            }
+            for (k = 0; k < molLengths[i]; k++){
+                atomic[i][j][k].xpos = another[k].xpos + positions[i][j].position[0];
+                atomic[i][j][k].ypos = another[k].ypos + positions[i][j].position[1];
+                atomic[i][j][k].zpos = another[k].zpos + positions[i][j].position[2];
+            }
+        }
+    }
+}
+
+void Normalise(int numData, int maxDataLength, struct ExpData data[numData][maxDataLength],
+               struct ExpData simData[numData][maxDataLength], int dataLengths[numData], int i)
+{
+    int random = rand() % dataLengths[i];
+    float norm = data[i][dataLengths[i] / random].i / simData[i][dataLengths[i] / random].i;
+    int j = 0;
+    for (j = 0; j < dataLengths[i]; j++)
+    {
+        simData[i][j].i = simData[i][j].i * norm;
+    }
+}
+
+void DiffractionCalculator(int numMolecules, int maxMolNum, int maxMolLength,
+                           struct Atom atomic [numMolecules][maxMolNum][maxMolLength],
+                           struct CharPair molNums[numMolecules], int molLengths[numMolecules], int numData,
+                           int maxDataLength, struct ExpData data[numData][maxDataLength], int dataLengths[numData],
+                           int goldenVectors, struct ExpData simData[numData][maxDataLength], int rank){
+    int i = 0;
+    for (i = 0; i < numData; i++){
+        int q;
+        for (q = 0; q < dataLengths[i]; q++){
+            float sum_int = 0.;
+            float k_min = (-1. * ((float)goldenVectors - 1.)) / 2.;
+            float k_max = ((float)goldenVectors - 1.) / 2.;
+            float a;
+            for (a = k_min; a < (k_max + 1); a += 1){
+                float qx = data[i][q].q * cos(asin((2. * a) / (float)goldenVectors)) * cos((2. * PI * a) / (PHI));
+                float qy = data[i][q].q * cos(asin((2. * a) / (float)goldenVectors)) * sin((2. * PI * a) / (PHI));
+                float qz = (2.0 * a * data[i][q].q) / (float)goldenVectors;
+                float sum_coss = 0.0;
+                float sum_sinn = 0.0;
+                int j;
+                for (j = 0; j < numMolecules; j++){
+                    int k;
+                    for (k = 0; k < atoi(molNums[j].keyword); k++){
+                        int l;
+                        for (l = 0; l < molLengths[j]; l++){
+                            float dot = qx * atomic[j][k][l].xpos + qy * atomic[j][k][l].ypos + qz * atomic[j][k][l].zpos;
+                            float coss = atomic[j][k][l].scatLen[i] * cos(dot);
+                            float sinn = atomic[j][k][l].scatLen[i] * sin(dot);
+                            sum_coss += coss;
+                            sum_sinn += sinn;
+                        }
+                        float sq_coss = sum_coss * sum_coss;
+                        float sq_sinn = sum_sinn * sum_sinn;
+                        sum_int += (sq_coss + sq_sinn);
+                    }
+                }
+            }
+            float inten = sum_int / goldenVectors;
+            simData[i][q].i = inten;
+            simData[i][q].q = data[i][q].q;
+        }
+        Normalise(numData, maxDataLength, data, simData, dataLengths, i);
+    }
+}
+
+void ChiSquared(int numData, int maxDataLength, struct ExpData data[numData][maxDataLength], int dataLengths[numData],
+                struct ExpData simData[numData][maxDataLength], float chiSq[numData], float cell[3])
+{
+    int i;
+    for (i = 0; i < numData; i++)
+    {
+        chiSq[i] = 0.;
+        int j;
+        for (j = 0; j < dataLengths[i]; j++)
+        {
+            if (data[i][j].q > (2 * PI) / cell[0])
+            {
+                chiSq[i] += ((simData[i][j].i - data[i][j].i) * (simData[i][j].i - data[i][j].i)) /
+                        (data[i][j].di * data[i][j].di);
+            }
+        }
+    }
+}
+
+void Analysis(int populationPerCore, int numMolecules, int maxMolNum, int maxMolLength,
+              struct CharPair molNums[numMolecules], int molLengths[numMolecules],
+              struct Atom differences[numMolecules][maxMolNum][maxMolLength],
+              struct PosAng population[populationPerCore][numMolecules][maxMolNum], int numData, int maxDataLength,
+              struct ExpData data[numData][maxDataLength], struct ExpData simData[numData][maxDataLength],
+              int dataLengths[numData], int goldenVectors, int rank, float chiSq[populationPerCore][numData],
+              float cell[3])
+{
+    int i;
+    for (i  = 0; i < populationPerCore; i++)
+    {
+        struct Atom atomic[numMolecules][maxMolNum][maxMolLength];
+        ConvertToAtomic(numMolecules, maxMolNum, molNums, maxMolLength, molLengths, differences, atomic, population[i],
+                        numData);
+        DiffractionCalculator(numMolecules, maxMolNum, maxMolLength, atomic, molNums, molLengths, numData,
+                              maxDataLength, data, dataLengths, goldenVectors, simData, rank);
+        ChiSquared(numData, maxDataLength, data, dataLengths, simData, chiSq[i], cell);
+    }
+}
+
 MPI_Comm mpstart(int *nProcs, int *rank)
 {
     MPI_Init(NULL, NULL);
@@ -520,6 +670,29 @@ int main(int argc, char *argv[])
 
     struct PosAng population[jobDetails.populationPerCore][numMolecules][maxMolNum];
     MakePopulation(jobDetails.populationPerCore, numMolecules, maxMolNum, population, molNums, cell);
+
+    float chiSq[jobDetails.populationPerCore][numData];
+    Analysis(jobDetails.populationPerCore, numMolecules, maxMolNum, maxMolLength, molNums, molLengths, differences,
+             population, numData, maxDataLength, data, simData, dataLengths, goldenVectors, rank, chiSq, cell);
+
+    float allChiSq[nProcs][jobDetails.populationPerCore][numData];
+    MPI_Gather(chiSq, numData * jobDetails.populationPerCore, MPI_FLOAT, allChiSq, numData * jobDetails.populationPerCore, MPI_FLOAT, 0, comm);
+
+    if (rank == 0){
+        int i;
+        for (i = 0; i < nProcs; i++)
+        {
+            int j;
+            for (j = 0; j < jobDetails.populationPerCore; j++)
+            {
+                int k;
+                for (k = 0; k < numData; k++)
+                {
+                    printf("%f\n", allChiSq[i][j][k]);
+                }
+            }
+        }
+    }
 
     printf("Successful\n");
     MPI_Finalize();
