@@ -406,14 +406,18 @@ void PopulateDifferences(int numMolecules, int maxMolNum, struct CharPair molNum
         int j;
         for (j = 0; atoi(molNums[i].keyword); j++)
         {
-            strncpy(differences[i][j][k].label, readMols[i][k].label, 3);
-            differences[i][j][k].xpos = readMols[i][k].xpos - mean[i][0];
-            differences[i][j][k].ypos = readMols[i][k].ypos - mean[i][1];
-            differences[i][j][k].zpos = readMols[i][k].zpos - mean[i][2];
-            int r = 0;
-            for (r = 0; r < numData; r++)
+            int k;
+            for (k = 0; k < molLengths[i]; k++)
             {
-                differences[i][j][k].scatLen[r] = readMols[i][k].scatLen[r];
+                strncpy(differences[i][j][k].label, readMols[i][k].label, 3);
+                differences[i][j][k].xpos = readMols[i][k].xpos - mean[i][0];
+                differences[i][j][k].ypos = readMols[i][k].ypos - mean[i][1];
+                differences[i][j][k].zpos = readMols[i][k].zpos - mean[i][2];
+                int r = 0;
+                for (r = 0; r < numData; r++)
+                {
+                    differences[i][j][k].scatLen[r] = readMols[i][k].scatLen[r];
+                }
             }
         }
     }
