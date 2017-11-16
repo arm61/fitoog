@@ -375,6 +375,50 @@ void GetAtomPositions(int numMolecules, int maxMolLength, struct Atom readMols[n
     }
 }
 
+void PopulateDifferences(int numMolecules, int maxMolNum, struct CharPair molNums[numMolecules],
+                         int maxMoleLength, int molLengths[numMolecules],
+                         struct Atom differences[numMolecules][maxMolNum][maxMoleLength],
+                         struct Atom readMols[numMolecules][maxMoleLength], int numData)
+{
+    float mean[numMolecules][3];
+    int i;
+    for (i = 0; i < numMolecules; i++)
+    {
+        int j;
+        for (j = 0; j < 3; j++)
+        {
+            mean[i][j] = 0.;
+        }
+        int k;
+        for (k = 0; k < molLengths[i]; k++)
+        {
+            mean[i][0] += readMols[i][k].xpos;
+            mean[i][1] += readMols[i][k].ypos;
+            mean[i][2] += readMols[i][k].zpos;
+        }
+        for (k = 0; k < 3; k++)
+        {
+            mean[i][k] /= molLengths[i];
+        }
+    }
+    for (i = 0; i < numMolecules; i++)
+    {
+        int j;
+        for (j = 0; atoi(molNums[i].keyword); j++)
+        {
+            strncpy(differences[i][j][k].label, readMols[i][k].label, 3);
+            differences[i][j][k].xpos = readMols[i][k].xpos - mean[i][0];
+            differences[i][j][k].ypos = readMols[i][k].ypos - mean[i][1];
+            differences[i][j][k].zpos = readMols[i][k].zpos - mean[i][2];
+            int r = 0;
+            for (r = 0; r < numData; r++)
+            {
+                differences[i][j][k].scatLen[r] = readMols[i][k].scatLen[r];
+            }
+        }
+    }
+}
+
 MPI_Comm mpstart(int *nProcs, int *rank)
 {
     MPI_Init(NULL, NULL);
@@ -430,6 +474,10 @@ int main(int argc, char *argv[])
 
     struct Atom readMols[numMolecules][maxMolLength];
     GetAtomPositions(numMolecules, maxMolLength, readMols, molTypes, numData);
+
+    struct Atom differences[numMolecules][maxMolNum][maxMolLength];
+    PopulateDifferences(numMolecules, maxMolNum, molNums, maxMolLength, molLengths, differences, readMols, numData);
+
 
     printf("Successful\n");
     MPI_Finalize();
