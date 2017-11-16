@@ -376,9 +376,9 @@ void GetAtomPositions(int numMolecules, int maxMolLength, struct Atom readMols[n
 }
 
 void PopulateDifferences(int numMolecules, int maxMolNum, struct CharPair molNums[numMolecules],
-                         int maxMoleLength, int molLengths[numMolecules],
-                         struct Atom differences[numMolecules][maxMolNum][maxMoleLength],
-                         struct Atom readMols[numMolecules][maxMoleLength], int numData)
+                         int maxMolLength, int molLengths[numMolecules],
+                         struct Atom differences[numMolecules][maxMolNum][maxMolLength],
+                         struct Atom readMols[numMolecules][maxMolLength], int numData)
 {
     float mean[numMolecules][3];
     int i;
@@ -404,7 +404,7 @@ void PopulateDifferences(int numMolecules, int maxMolNum, struct CharPair molNum
     for (i = 0; i < numMolecules; i++)
     {
         int j;
-        for (j = 0; atoi(molNums[i].keyword); j++)
+        for (j = 0; j < atoi(molNums[i].keyword); j++)
         {
             int k;
             for (k = 0; k < molLengths[i]; k++)
@@ -420,6 +420,42 @@ void PopulateDifferences(int numMolecules, int maxMolNum, struct CharPair molNum
                 }
             }
         }
+    }
+}
+
+float RandFloat(float max, float min)
+{
+    float x = (float)rand() / ((float)RAND_MAX / max) + min;
+    return x;
+}
+
+void MakeRandom(int numMolecules, int maxMolNum, struct CharPair molNums[numMolecules],
+                struct PosAng positions[numMolecules][maxMolNum], float cell[3])
+{
+    int i;
+    for (i = 0; i < numMolecules; i++)
+    {
+        int j;
+        for (j = 0; j < atoi(molNums[i].keyword); j++)
+        {
+            int k;
+            for (k = 0; k < 3; k++)
+            {
+                positions[i][j].position[k] = RandFloat(cell[k], 0);
+                positions[i][j].angle[k] = RandFloat(2 * PI, 0);
+            }
+        }
+    }
+}
+
+void MakePopulation(int populationSize, int numMolecules, int maxMolNum,
+                    struct PosAng population[populationSize][numMolecules][maxMolNum],
+                    struct CharPair molNums[numMolecules], float cell[3])
+{
+    int i;
+    for (i = 0; i < populationSize; i++)
+    {
+        MakeRandom(numMolecules, maxMolNum, molNums, population[i], cell);
     }
 }
 
@@ -482,6 +518,8 @@ int main(int argc, char *argv[])
     struct Atom differences[numMolecules][maxMolNum][maxMolLength];
     PopulateDifferences(numMolecules, maxMolNum, molNums, maxMolLength, molLengths, differences, readMols, numData);
 
+    struct PosAng population[jobDetails.populationPerCore][numMolecules][maxMolNum];
+    MakePopulation(jobDetails.populationPerCore, numMolecules, maxMolNum, population, molNums, cell);
 
     printf("Successful\n");
     MPI_Finalize();
