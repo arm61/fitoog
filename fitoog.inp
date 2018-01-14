@@ -3,7 +3,7 @@ num_molecules;2
 molecule0;cta_mar.fit
 molecule1;no3_mar.fit
 num_mole0;50
-num_mole1;50
+num_mole1;10
 cell;82.15
 num_data;1
 data0;sans2d.txt
