@@ -740,16 +740,18 @@ void integrator(struct Job job, int n_procs, int rank,
             for (k = 0; k < mol_lengths[j]; k++) {
                 int l;
                 for (l = 0; l < 3; l++) {
-                    velocity[i][j][k].position[0] = velocity[i][j][k].position[l] +
+                    velocity[i][j][k].position[l] = velocity[i][j][k].position[l] +
                                                     (rand_float(job.phi[0], 0.0) * (pbest[i][j][k].position[l] -
                                                                                 population[i][j][k].position[l])) +
                                                     (rand_float(job.phi[1], 0.0) * (gbest[j][k].position[l] -
                                                                               population[i][j][k].position[l]));
+                    velocity[i][j][k].position[l] = fmod(velocity[i][j][k].position[l], job.cell[l]);
                     velocity[i][j][k].angle[l] = velocity[i][j][k].angle[l] +
                                                  (rand_float(job.phi[0], 0.0) * (pbest[i][j][k].angle[l] -
                                                                              population[i][j][k].angle[l])) +
                                                  (rand_float(job.phi[1], 0.0) * (gbest[j][k].angle[l] -
                                                                            population[i][j][k].angle[l]));
+                    velocity[i][j][k].angle[l] = fmod(velocity[i][j][k].angle[l], (2. * PI));
                 }
             }
         }
