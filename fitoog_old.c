@@ -57,7 +57,7 @@ struct ExpData
 char *FirstCharAfterSpace(char *input)
 {
     char *starting = input;
-    while (*starting != ';')
+    while (*starting != ' ')
     {
         starting++;
     }
