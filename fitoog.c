@@ -221,6 +221,7 @@ void get_iterator_labels(int num, struct CharPair pair[num], char id[50])
     fclose(input_file);
 }
 
+
 void get_files_lengths(int num_files, int lengths[num_files], struct CharPair pair[num_files])
 {
     int i;
@@ -555,6 +556,56 @@ void convert_to_atomic(struct Job job, struct CharPair mol_nums[job.molecule_typ
     }
 }
 
+
+void write_to_xyz(struct Job job,
+                  struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
+                  struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                  struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number],
+                  int to_print, int ranking, int iter)
+{
+    struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
+    convert_to_atomic(job, mol_nums, population, mol_lengths, atomic, differences);
+    char str[50];
+    sprintf(str, "fitoogbest_%d_%d.xyz", iter, ranking);
+    FILE *f = fopen(str, "w");
+    if (f == NULL)
+    {
+        printf("Error opening output xyz file!\n");
+    }
+    else
+    {
+        int num_atoms = 0;
+        int i;
+        for (i = 0; i < job.molecule_types_number; i++)
+        {
+            int j;
+            for (j = 0; j < atoi(mol_nums[i].keyword); j++)
+            {
+                int k;
+                for (k = 0; k < mol_lengths[i]; k++)
+                {
+                    num_atoms += 1;
+                }
+            }
+        }
+        fprintf(f, "%d\nThis xyz file was produced by fitoog.\n", num_atoms);
+        for (i = 0; i < job.molecule_types_number; i++)
+        {
+            int j;
+            for (j = 0; j < atoi(mol_nums[i].keyword); j++)
+            {
+                int k;
+                for (k = 0; k < mol_lengths[i]; k++)
+                {
+                    fprintf(f, "%s %f %f %f \n", atomic[to_print][i][j][k].label, atomic[to_print][i][j][k].x,
+                            atomic[to_print][i][j][k].y, atomic[to_print][i][j][k].z);
+                }
+            }
+        }
+        fclose(f);
+    }
+}
+
 void normalise(struct Job job, struct Data exp_data[job.scattering_data_number][job.max_data_length],
                struct Data sim_data[job.scattering_data_number][job.max_data_length],
                int data_lengths[job.scattering_data_number], int i)
@@ -867,7 +918,9 @@ void update_pbest(struct Job job,
 void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number][job.max_mol_num],
                   struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
                   int mol_lengths[job.molecule_types_number], double *gbest_chisq, int n_procs,
-                  float all_chi_sq[n_procs][job.population_per_core], int rank, MPI_Comm comm)
+                  float all_chi_sq[n_procs][job.population_per_core], int rank, MPI_Comm comm,
+                  struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                  struct CharPair mol_nums[job.molecule_types_number], int iter)
 {
     int best[2];
     if (rank == 0){
@@ -892,6 +945,7 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
                 }
             }
         }
+        write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
     }
     MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
     int i;
@@ -908,6 +962,7 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
             }
         }
     }
+
 }
 
 int main(int argc, char *argv[])
@@ -972,7 +1027,8 @@ int main(int argc, char *argv[])
         MPI_Gather(chi_sq, job.population_per_core, MPI_FLOAT, all_chi_sq, job.population_per_core, MPI_FLOAT, 0, comm);
 
         update_pbest(job, pbest, population, mol_lengths, pbest_chisq, chi_sq);
-        update_gbest(job, gbest, population, mol_lengths, &gbest_chisq, n_procs, all_chi_sq, rank, comm);
+        update_gbest(job, gbest, population, mol_lengths, &gbest_chisq, n_procs, all_chi_sq, rank, comm, differences,
+                     mol_nums, i);
 
         integrator(job, n_procs, rank, population, pbest, gbest, mol_lengths, velocity);
     }
