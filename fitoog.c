@@ -766,9 +766,9 @@ void best_chi_sq_local(struct Job job, float all_chi_sq[job.population_per_core]
     best[1] = bestj;
 }
 
-void best_chi_sq(struct Job job, int n_procs, float all_chi_sq[n_procs][job.population_per_core], int best[2])
+void best_chi_sq(struct Job job, int n_procs, float all_chi_sq[n_procs][job.population_per_core], int best[2],
+                 double *gbest_chisq)
 {
-    float a = all_chi_sq[0][0];
     int besti = 0;
     int bestj = 0;
     int i;
@@ -777,9 +777,9 @@ void best_chi_sq(struct Job job, int n_procs, float all_chi_sq[n_procs][job.popu
         int j;
         for (j = 0; j < job.population_per_core; j++)
         {
-            if (all_chi_sq[i][j] < a)
+            if (all_chi_sq[i][j] < *gbest_chisq)
             {
-                a = all_chi_sq[i][j];
+                *gbest_chisq = all_chi_sq[i][j];
                 besti = i;
                 bestj = j;
             }
@@ -933,8 +933,8 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
 {
     int best[2];
     if (rank == 0){
-        best_chi_sq(job, n_procs, all_chi_sq, best);
-        printf("%d %d %f\n", best[0], best[1], all_chi_sq[best[0]][best[1]]);
+        best_chi_sq(job, n_procs, all_chi_sq, best, gbest_chisq);
+        printf("%d %d %f %f\n", best[0], best[1], all_chi_sq[best[0]][best[1]], *gbest_chisq);
     }
     MPI_Bcast(&best, 2, MPI_INT, 0, comm);
     float best_of_pop[job.molecule_types_number][job.max_mol_num][6];
@@ -959,22 +959,42 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
             write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
         }
     }
-    MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
-    int i;
-    for (i = 0; i < job.molecule_types_number; i++)
+    if (all_chi_sq[best[0]][best[1]] < *gbest_chisq)
     {
-        int j;
-        for (j = 0; j < mol_lengths[i]; j++)
+        MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
+        int i;
+        for (i = 0; i < job.molecule_types_number; i++)
         {
-            int k;
-            for (k = 0; k < 3; k++)
+            int j;
+            for (j = 0; j < mol_lengths[i]; j++)
             {
-                gbest[i][j].position[k] = best_of_pop[i][j][k];
-                gbest[i][j].angle[k+3] = best_of_pop[i][j][k + 3];
+                int k;
+                for (k = 0; k < 3; k++)
+                {
+                    gbest[i][j].position[k] = best_of_pop[i][j][k];
+                    gbest[i][j].angle[k+3] = best_of_pop[i][j][k + 3];
+                }
             }
         }
     }
-
+    else
+    {
+        MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
+        int i;
+        for (i = 0; i < job.molecule_types_number; i++)
+        {
+            int j;
+            for (j = 0; j < mol_lengths[i]; j++)
+            {
+                int k;
+                for (k = 0; k < 3; k++)
+                {
+                    gbest[i][j].position[k] = gbest[i][j].position[k];
+                    gbest[i][j].angle[k+3] = gbest[i][j].angle[k+3];
+                }
+            }
+        }
+    }
 }
 
 int main(int argc, char *argv[])
