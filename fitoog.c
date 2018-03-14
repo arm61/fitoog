@@ -939,7 +939,6 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
         storage = *gbest_chisq;
     }
     MPI_Bcast(&best, 2, MPI_INT, 0, comm);
-    //MPI_Bcast(&all_chi_sq, n_procs * job.population_per_core, MPI_FLOAT, 0, comm);
     MPI_Bcast(&storage, 1, MPI_FLOAT, 0, comm);
     float best_of_pop[job.molecule_types_number][job.max_mol_num][6];
     if (rank == best[0])
