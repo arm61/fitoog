@@ -10,6 +10,7 @@ cell2;82.15
 num_data;1
 data0;sans2d.txt
 pop_size;16
-num_steps;10
+num_steps;40
 phi0;2.0
 phi1;2.0
+print_freq;10

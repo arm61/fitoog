@@ -48,6 +48,7 @@ struct Job
     int max_mol_length;
     int max_mol_num;
     float phi[2];
+    int print_freq;
 };
 
 struct Data
@@ -183,6 +184,14 @@ void read_input_file(struct Job *job)
             strncpy(temp, first_char_after_space(line), 50);
             strcat(temp, "\0");
             job->steps_number = atoi(temp);
+        }
+        found = find_word_in_line(line, "print_freq");
+        if(found != NULL)
+        {
+            strncpy(temp, wipe, 50);
+            strncpy(temp, first_char_after_space(line), 50);
+            strcat(temp, "\0");
+            job->print_freq = atoi(temp);
         }
     }
     fclose(input_file);
@@ -945,7 +954,10 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
                 }
             }
         }
-        write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
+        if (iter % job.print_freq == 0)
+        {
+            write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
+        }
     }
     MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
     int i;
