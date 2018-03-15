@@ -933,13 +933,16 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
 {
     int best[2];
     float storage;
+    float storage2;
     if (rank == 0){
         best_chi_sq(job, n_procs, all_chi_sq, best, gbest_chisq);
         printf("%d %d %f %f\n", best[0], best[1], all_chi_sq[best[0]][best[1]], *gbest_chisq);
         storage = *gbest_chisq;
+        storage2 = all_chi_sq[best[0]][best[1]];
     }
     MPI_Bcast(&best, 2, MPI_INT, 0, comm);
     MPI_Bcast(&storage, 1, MPI_FLOAT, 0, comm);
+    MPI_Bcast(&storage2, 1, MPI_FLOAT, 0, comm);
     float best_of_pop[job.molecule_types_number][job.max_mol_num][6];
     if (rank == best[0])
     {
@@ -958,7 +961,7 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
             }
         }
     }
-    if (all_chi_sq[best[0]][best[1]] < storage)
+    if (storage2 <= storage)
     {
         MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
         int i;
