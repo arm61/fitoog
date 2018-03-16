@@ -13,4 +13,4 @@ pop_size;16
 num_steps;40
 phi0;2.0
 phi1;2.0
-print_freq;10
+restart;yes

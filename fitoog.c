@@ -185,13 +185,10 @@ void read_input_file(struct Job *job)
             strcat(temp, "\0");
             job->steps_number = atoi(temp);
         }
-        found = find_word_in_line(line, "print_freq");
+        found = find_word_in_line(line, "restart;yes");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->print_freq = atoi(temp);
+            job->restart = 1;
         }
     }
     fclose(input_file);
@@ -498,7 +495,8 @@ void build_population(struct Job job,
 }
 
 
-void rotation_matrix(float x, float y, float z, float rm[3][3]){
+void rotation_matrix(float x, float y, float z, float rm[3][3])
+{
     rm[0][0] = cos(x) * cos(y) * cos(z) - sin(x) * sin(z);
     rm[0][1] = -cos(x) * cos(y) * sin(z) - sin(x) * cos(z);
     rm[0][2] = cos(x) * sin(y);
@@ -978,7 +976,10 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
                 }
             }
         }
-        write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
+        if (rank == 0)
+        {
+            write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
+        }
     }
     else
     {
@@ -1035,13 +1036,21 @@ int main(int argc, char *argv[])
     get_data_points(job, exp_data, data_types);
 
     struct Atom molecules[job.molecule_types_number][job.max_mol_length];
-    get_atom_positions(job, molecules, mol_types);
-
     struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length];
-    get_differences(job, mol_nums, mol_lengths, differences, molecules);
-
     struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num];
-    build_population(job, population, mol_nums);
+
+    if (job.restart == 0)
+    {
+        get_atom_positions(job, molecules, mol_types);
+
+        get_differences(job, mol_nums, mol_lengths, differences, molecules);
+
+        build_population(job, population, mol_nums);
+    }
+    else
+    {
+        exit(1);
+    }
 
     struct PosAng velocity[job.population_per_core][job.molecule_types_number][job.max_mol_num];
     struct PosAng pbest[job.population_per_core][job.molecule_types_number][job.max_mol_num];
