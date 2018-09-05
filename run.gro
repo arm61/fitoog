@@ -1,0 +1,12 @@
+#!/bin/bash
+#BSUB -n 16
+#BSUB -o %J.o
+#BSUB -e %J.e
+#BSUB -W 1440
+#BSUB -x
+
+module load gcc/4.8.2
+module load openmpi/gcc/4.8.2/1.6.5
+
+#  Submit the job using pirun
+mpirun fitoog
