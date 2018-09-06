@@ -1584,8 +1584,6 @@ int main(int argc, char *argv[])
     double gbest_chisq;
     initialise_best(job, pbest, gbest, population, mol_lengths, pbest_chisq, &gbest_chisq);
     initialise_velocities(job, velocity, mol_lengths);
-    char str[50];
-    FILE *f = fopen(str, "w");
     int i;
     for (i = 0; i < job.steps_number; i++)
     {
