@@ -1319,7 +1319,7 @@ void get_differences_restart(struct Job job, struct CharPair mol_nums[job.molecu
 void energy_minimisation(struct Job job,
                          struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
                          struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
-                         int to_minim, struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number], struct Bond bonds[job.max_mol_length], int num_bonds)
+                         int to_minim, struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number], struct Bond bonds[job.max_mol_length], int num_bonds, struct Data exp_data[job.scattering_data_number][job.max_data_length], struct Data sim_data[job.scattering_data_number][job.max_data_length], int data_lengths[job.scattering_data_number], double *gbest_chisq)
 {
     struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
 
@@ -1332,12 +1332,15 @@ void energy_minimisation(struct Job job,
     }
     int count;
     float old_force = 0;
-    float hn = 0.001;
+    float old_energy = 100000;
+    float total_energy = 0;
+
+    double hn = 0.001;
     float total_force = 1000000;
-    while (abs(old_force - total_force) > 1)
+    while (abs(old_force - total_force) > 0.1)
     {
-        float total_energy = 0;
         old_force = total_force;
+        old_energy = total_energy;
         total_force = 0;
         float force_x[num_atoms], force_y[num_atoms], force_z[num_atoms];
         for (i = 0; i < num_atoms; i++)
@@ -1347,10 +1350,12 @@ void energy_minimisation(struct Job job,
             force_z[i] = 0;
         }
         get_energy(job, atomic, to_minim, mol_nums, mol_lengths, bonds, num_bonds, num_atoms, force_x, force_y, force_z, &total_energy, &total_force);
-        printf("%f %f \n ", total_energy, total_force);
+        printf("%f %f %f\n ", total_energy, total_force, hn);
         move(job, atomic, to_minim, mol_nums, mol_lengths, num_atoms, force_x, force_y, force_z, hn);
     }
     get_differences_restart(job, mol_nums, mol_lengths, differences, to_minim, atomic);
+    diffraction_calculator(job, atomic[to_minim], exp_data, sim_data, data_lengths, mol_nums, mol_lengths);
+    *gbest_chisq = get_chisq(job, exp_data, sim_data, data_lengths);
 }
 
 void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number][job.max_mol_num],
@@ -1358,7 +1363,7 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
                   int mol_lengths[job.molecule_types_number], double *gbest_chisq, int n_procs,
                   float all_chi_sq[n_procs][job.population_per_core], int rank, MPI_Comm comm,
                   struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
-                  struct CharPair mol_nums[job.molecule_types_number], int iter, struct Bond bonds[job.max_mol_length], int num_bonds)
+                  struct CharPair mol_nums[job.molecule_types_number], int iter, struct Bond bonds[job.max_mol_length], int num_bonds, struct Data exp_data[job.scattering_data_number][job.max_data_length], struct Data sim_data[job.scattering_data_number][job.max_data_length], int data_lengths[job.scattering_data_number])
 {
     int best[2];
     float storage;
@@ -1409,7 +1414,7 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
     {
         if (rank == 0)
         {
-            energy_minimisation(job, population, differences, best[1], mol_nums, mol_lengths, bonds, num_bonds);
+            energy_minimisation(job, population, differences, best[1], mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths, gbest_chisq);
             write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
             write_to_fit(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
         }
@@ -1595,7 +1600,7 @@ int main(int argc, char *argv[])
 
         update_pbest(job, pbest, population, mol_lengths, pbest_chisq, chi_sq);
         update_gbest(job, gbest, population, mol_lengths, &gbest_chisq, n_procs, all_chi_sq, rank, comm, differences,
-                     mol_nums, i, bonds, num_bonds);
+                     mol_nums, i, bonds, num_bonds, exp_data, sim_data, data_lengths);
         //printf("%f\n", gbest_chisq);
         integrator(job, n_procs, rank, population, pbest, gbest, mol_lengths, velocity);
     }
