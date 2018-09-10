@@ -2,8 +2,8 @@ name;testing
 num_molecules;2
 molecule0;cta_mar.fit
 molecule1;no3_mar.fit
-num_mole0;50
-num_mole1;50
+num_mole0;100
+num_mole1;100
 cell0;82.15
 cell1;82.15
 cell2;82.15
@@ -11,6 +11,5 @@ num_data;1
 data0;sans2d.txt
 pop_size;32
 num_steps;5000
-phi0;0.5
-phi1;0.5
-em_freq;10
+phi0;0.1
+phi1;0.1

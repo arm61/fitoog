@@ -34,16 +34,6 @@ struct Atom
     float sl[10];
 };
 
-struct EnerForce
-{
-    float xe;
-    float ye;
-    float ze;
-    float xf;
-    float yf;
-    float zf;
-};
-
 struct Bond
 {
     int molecule_index;
@@ -112,6 +102,24 @@ char *first_char_after_space(char *input)
     return starting;
 }
 
+int read_int(char line[100], const char wipe[50])
+{
+    char temp[50];
+    strncpy(temp, wipe, 50);
+    strncpy(temp, first_char_after_space(line), 50);
+    strcat(temp, "\0");
+    return atoi(temp);
+}
+
+float read_float(char line[100], const char wipe[50])
+{
+    char temp[50];
+    strncpy(temp, wipe, 50);
+    strncpy(temp, first_char_after_space(line), 50);
+    strcat(temp, "\0");
+    return atof(temp);
+}
+
 void read_input_file(struct Job *job)
 {
     FILE *input_file;
@@ -136,74 +144,47 @@ void read_input_file(struct Job *job)
         found = find_word_in_line(line, "num_molecules");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->molecule_types_number = atoi(temp);
+            job->molecule_types_number = read_int(line, wipe);
         }
         found = find_word_in_line(line, "phi0");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->phi[0] = atof(temp);
+            job->phi[0] = read_float(line, wipe);
         }
         found = find_word_in_line(line, "phi1");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->phi[1] = atof(temp);
+            job->phi[1] = read_float(line, wipe);
         }
         found = find_word_in_line(line, "cell0");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->cell[0] = atof(temp);
+            job->cell[0] = read_float(line, wipe);
         }
         found = find_word_in_line(line, "cell1");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->cell[1] = atof(temp);
+            job->cell[1] = read_float(line, wipe);
         }
         found = find_word_in_line(line, "cell2");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->cell[2] = atof(temp);
+            job->cell[2] = read_float(line, wipe);
         }
         found = find_word_in_line(line, "num_data");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->scattering_data_number = atoi(temp);
+            job->scattering_data_number = read_int(line, wipe);
         }
         found = find_word_in_line(line, "pop_size");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->population_size = atoi(temp);
+            job->population_size = read_int(line, wipe);
         }
         found = find_word_in_line(line, "num_steps");
         if(found != NULL)
         {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->steps_number = atoi(temp);
+            job->steps_number = read_int(line, wipe);
         }
         found = find_word_in_line(line, "restart");
         if(found != NULL)
@@ -216,14 +197,6 @@ void read_input_file(struct Job *job)
             {
                 job->restart = 0;
             }
-        }
-        found = find_word_in_line(line, "em_freq");
-        if(found != NULL)
-        {
-            strncpy(temp, wipe, 50);
-            strncpy(temp, first_char_after_space(line), 50);
-            strcat(temp, "\0");
-            job->em_freq = atoi(temp);
         }
     }
     fclose(input_file);
@@ -1322,6 +1295,7 @@ void energy_minimisation(struct Job job,
                          int to_minim, struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number], struct Bond bonds[job.max_mol_length], int num_bonds, struct Data exp_data[job.scattering_data_number][job.max_data_length], struct Data sim_data[job.scattering_data_number][job.max_data_length], int data_lengths[job.scattering_data_number], double *gbest_chisq)
 {
     struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
+    struct Atom old_atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
 
     convert_to_atomic(job, mol_nums, population, mol_lengths, atomic, differences);
     int num_atoms = 0;
@@ -1337,11 +1311,13 @@ void energy_minimisation(struct Job job,
 
     double hn = 0.001;
     float total_force = 1000000;
+    int count_bad = 0;
     while (abs(old_force - total_force) > 0.1)
     {
         old_force = total_force;
         old_energy = total_energy;
         total_force = 0;
+        total_energy = 0;
         float force_x[num_atoms], force_y[num_atoms], force_z[num_atoms];
         for (i = 0; i < num_atoms; i++)
         {
@@ -1350,9 +1326,24 @@ void energy_minimisation(struct Job job,
             force_z[i] = 0;
         }
         get_energy(job, atomic, to_minim, mol_nums, mol_lengths, bonds, num_bonds, num_atoms, force_x, force_y, force_z, &total_energy, &total_force);
-        printf("%f %f %f\n ", total_energy, total_force, hn);
+        if (old_energy < total_energy)
+        {
+            hn = 0.2 * hn;
+            old_force = total_force + 100;
+            count_bad += 1;
+            if (count_bad > 10)
+            {
+                printf("danger\n");
+                break;
+            }
+        }
+        else
+        {
+            hn = 1.2 * hn;
+        }
         move(job, atomic, to_minim, mol_nums, mol_lengths, num_atoms, force_x, force_y, force_z, hn);
     }
+    printf("%f %f %f\n", total_energy, total_force, hn);
     get_differences_restart(job, mol_nums, mol_lengths, differences, to_minim, atomic);
     diffraction_calculator(job, atomic[to_minim], exp_data, sim_data, data_lengths, mol_nums, mol_lengths);
     *gbest_chisq = get_chisq(job, exp_data, sim_data, data_lengths);
@@ -1415,10 +1406,12 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
         if (rank == 0)
         {
             energy_minimisation(job, population, differences, best[1], mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths, gbest_chisq);
+            printf("%d %d %d %f %f adnrew\n", iter, best[0], best[1], all_chi_sq[best[0]][best[1]], *gbest_chisq);
             write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
             write_to_fit(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
         }
     }
+    MPI_Bcast(differences, job.molecule_types_number*job.max_mol_num*job.max_mol_length*6, MPI_FLOAT, 0, comm);
 }
 
 void get_atom_positions_restart(struct Job job,
@@ -1601,7 +1594,6 @@ int main(int argc, char *argv[])
         update_pbest(job, pbest, population, mol_lengths, pbest_chisq, chi_sq);
         update_gbest(job, gbest, population, mol_lengths, &gbest_chisq, n_procs, all_chi_sq, rank, comm, differences,
                      mol_nums, i, bonds, num_bonds, exp_data, sim_data, data_lengths);
-        //printf("%f\n", gbest_chisq);
         integrator(job, n_procs, rank, population, pbest, gbest, mol_lengths, velocity);
     }
 
