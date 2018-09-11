@@ -395,72 +395,76 @@ void get_atom_positions(struct Job job, struct Atom molecules[job.molecule_types
 
 void get_differences(struct Job job, struct CharPair mol_nums[job.molecule_types_number],
                      int mol_lengths[job.molecule_types_number],
-                     struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                     struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
                      struct Atom molecules[job.molecule_types_number][job.max_mol_length])
 {
     float mean[job.molecule_types_number][3];
-    int i;
-    for(i = 0; i < job.molecule_types_number; i++)
+    int p;
+    for (p = 0; p < job.population_per_core; p++)
     {
-        if (mol_lengths[i] > 1)
+        int i;
+        for(i = 0; i < job.molecule_types_number; i++)
         {
-            int j;
-            for(j = 0; j < 3; j++)
+            if (mol_lengths[i] > 1)
             {
-                mean[i][j] = 0.;
-            }
-            for(j = 0; j < mol_lengths[i]; j++)
-            {
-                mean[i][0] += molecules[i][j].x;
-                mean[i][1] += molecules[i][j].y;
-                mean[i][2] += molecules[i][j].z;
-            }
-            for(j = 0; j < 3; j++)
-            {
-                mean[i][j] /= mol_lengths[i];
-            }
-        }
-    }
-    for(i = 0; i < job.molecule_types_number; i++)
-    {
-        if (mol_lengths[i] > 1)
-        {
-            int j;
-            for(j = 0; j < atoi(mol_nums[i].keyword); j++)
-            {
-                int k;
-                for(k = 0; k < mol_lengths[i]; k++)
+                int j;
+                for(j = 0; j < 3; j++)
                 {
-                    differences[i][j][k].index = molecules[i][k].index;
-                    strncpy(differences[i][j][k].label, molecules[i][k].label, 3);
-                    differences[i][j][k].x = molecules[i][k].x - mean[i][0];
-                    differences[i][j][k].y = molecules[i][k].y - mean[i][1];
-                    differences[i][j][k].z = molecules[i][k].z - mean[i][2];
-                    int r = 0;
-                    for(r = 0; r < job.scattering_data_number; r++)
-                    {
-                        differences[i][j][k].sl[r] = molecules[i][k].sl[r];
-                    }
+                    mean[i][j] = 0.;
+                }
+                for(j = 0; j < mol_lengths[i]; j++)
+                {
+                    mean[i][0] += molecules[i][j].x;
+                    mean[i][1] += molecules[i][j].y;
+                    mean[i][2] += molecules[i][j].z;
+                }
+                for(j = 0; j < 3; j++)
+                {
+                    mean[i][j] /= mol_lengths[i];
                 }
             }
         }
-        else
+        for(i = 0; i < job.molecule_types_number; i++)
         {
-            int j;
-            for(j = 0; j < atoi(mol_nums[i].keyword); j++)
+            if (mol_lengths[i] > 1)
             {
-                int k;
-                for(k = 0; k < mol_lengths[i]; k++)
+                int j;
+                for(j = 0; j < atoi(mol_nums[i].keyword); j++)
                 {
-                    differences[i][j][k].index = molecules[i][k].index;
-                    strncpy(differences[i][j][k].label, molecules[i][k].label, 3);
-                    differences[i][j][k].x = 0.;
-                    differences[i][j][k].y = 0.;
-                    differences[i][j][k].z = 0.;
-                    int r = 0;
-                    for(r = 0; r < job.scattering_data_number; r++)
+                    int k;
+                    for(k = 0; k < mol_lengths[i]; k++)
                     {
-                        differences[i][j][k].sl[r] = molecules[i][k].sl[r];
+                        differences[p][i][j][k].index = molecules[i][k].index;
+                        strncpy(differences[p][i][j][k].label, molecules[i][k].label, 3);
+                        differences[p][i][j][k].x = molecules[i][k].x - mean[i][0];
+                        differences[p][i][j][k].y = molecules[i][k].y - mean[i][1];
+                        differences[p][i][j][k].z = molecules[i][k].z - mean[i][2];
+                        int r = 0;
+                        for(r = 0; r < job.scattering_data_number; r++)
+                        {
+                            differences[p][i][j][k].sl[r] = molecules[i][k].sl[r];
+                        }
+                    }
+                }
+            }
+            else
+            {
+                int j;
+                for(j = 0; j < atoi(mol_nums[i].keyword); j++)
+                {
+                    int k;
+                    for(k = 0; k < mol_lengths[i]; k++)
+                    {
+                        differences[p][i][j][k].index = molecules[i][k].index;
+                        strncpy(differences[p][i][j][k].label, molecules[i][k].label, 3);
+                        differences[p][i][j][k].x = 0.;
+                        differences[p][i][j][k].y = 0.;
+                        differences[p][i][j][k].z = 0.;
+                        int r = 0;
+                        for(r = 0; r < job.scattering_data_number; r++)
+                        {
+                            differences[p][i][j][k].sl[r] = molecules[i][k].sl[r];
+                        }
                     }
                 }
             }
@@ -526,7 +530,7 @@ void convert_to_atomic(struct Job job, struct CharPair mol_nums[job.molecule_typ
                        struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
                        int mol_lengths[job.molecule_types_number],
                        struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
-                       struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length])
+                       struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length])
 {
     int i;
     for (i = 0; i < job.population_per_core; i++)
@@ -543,13 +547,13 @@ void convert_to_atomic(struct Job job, struct CharPair mol_nums[job.molecule_typ
                 int l;
                 for (l = 0; l < mol_lengths[j]; l++)
                 {
-                    strncpy(atomic[i][j][k][l].label, differences[j][k][l].label, 3);
-                    atomic[i][j][k][l].x = population[i][j][k].position[0] - differences[j][k][l].x;
-                    atomic[i][j][k][l].y = population[i][j][k].position[1] - differences[j][k][l].y;
-                    atomic[i][j][k][l].z = population[i][j][k].position[2] - differences[j][k][l].z;
+                    strncpy(atomic[i][j][k][l].label, differences[i][j][k][l].label, 3);
+                    atomic[i][j][k][l].x = population[i][j][k].position[0] - differences[i][j][k][l].x;
+                    atomic[i][j][k][l].y = population[i][j][k].position[1] - differences[i][j][k][l].y;
+                    atomic[i][j][k][l].z = population[i][j][k].position[2] - differences[i][j][k][l].z;
                     int r = 0;
                     for (r = 0; r < job.scattering_data_number; r++) {
-                        atomic[i][j][k][l].sl[r] = differences[j][k][l].sl[r];
+                        atomic[i][j][k][l].sl[r] = differences[i][j][k][l].sl[r];
                     }
                 }
                 struct Atom other[mol_lengths[j]];
@@ -579,7 +583,7 @@ void convert_to_atomic(struct Job job, struct CharPair mol_nums[job.molecule_typ
 
 void write_to_fit(struct Job job,
                   struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
-                  struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                  struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
                   struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number],
                   int to_print, int ranking, int iter)
 {
@@ -636,7 +640,7 @@ void write_to_fit(struct Job job,
 
 void write_to_xyz(struct Job job,
                   struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
-                  struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                  struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
                   struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number],
                   int to_print, int ranking, int iter)
 {
@@ -790,7 +794,7 @@ float get_chisq(struct Job job, struct Data exp_data[job.scattering_data_number]
 void analyse(struct Job job,
              struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
              struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number],
-             struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+             struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
              struct Data exp_data[job.scattering_data_number][job.max_data_length],
              struct Data sim_data[job.scattering_data_number][job.max_data_length],
              int data_lengths[job.scattering_data_number], float chi_sq[job.population_per_core])
@@ -1214,7 +1218,7 @@ void move(struct Job job, struct Atom atomic[job.population_per_core][job.molecu
 
 void get_differences_restart(struct Job job, struct CharPair mol_nums[job.molecule_types_number],
                              int mol_lengths[job.molecule_types_number],
-                             struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length], int to_minim,
+                             struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length], int to_minim,
                              struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length])
 {
     float mean[job.molecule_types_number][job.max_mol_num][3];
@@ -1254,14 +1258,14 @@ void get_differences_restart(struct Job job, struct CharPair mol_nums[job.molecu
                 int k;
                 for(k = 0; k < mol_lengths[i]; k++)
                 {
-                    strncpy(differences[i][j][k].label, atomic[to_minim][i][j][k].label, 3);
-                    differences[i][j][k].x = atomic[to_minim][i][j][k].x - mean[i][j][0];
-                    differences[i][j][k].y = atomic[to_minim][i][j][k].y - mean[i][j][1];
-                    differences[i][j][k].z = atomic[to_minim][i][j][k].z - mean[i][j][2];
+                    strncpy(differences[to_minim][i][j][k].label, atomic[to_minim][i][j][k].label, 3);
+                    differences[to_minim][i][j][k].x = atomic[to_minim][i][j][k].x - mean[i][j][0];
+                    differences[to_minim][i][j][k].y = atomic[to_minim][i][j][k].y - mean[i][j][1];
+                    differences[to_minim][i][j][k].z = atomic[to_minim][i][j][k].z - mean[i][j][2];
                     int r = 0;
                     for(r = 0; r < job.scattering_data_number; r++)
                     {
-                        differences[i][j][k].sl[r] = atomic[to_minim][i][j][k].sl[r];
+                        differences[to_minim][i][j][k].sl[r] = atomic[to_minim][i][j][k].sl[r];
                     }
                 }
             }
@@ -1274,14 +1278,14 @@ void get_differences_restart(struct Job job, struct CharPair mol_nums[job.molecu
                 int k;
                 for(k = 0; k < mol_lengths[i]; k++)
                 {
-                    strncpy(differences[i][j][k].label, atomic[to_minim][i][j][k].label, 3);
-                    differences[i][j][k].x = 0.;
-                    differences[i][j][k].y = 0.;
-                    differences[i][j][k].z = 0.;
+                    strncpy(differences[to_minim][i][j][k].label, atomic[to_minim][i][j][k].label, 3);
+                    differences[to_minim][i][j][k].x = 0.;
+                    differences[to_minim][i][j][k].y = 0.;
+                    differences[to_minim][i][j][k].z = 0.;
                     int r = 0;
                     for(r = 0; r < job.scattering_data_number; r++)
                     {
-                        differences[i][j][k].sl[r] = atomic[to_minim][i][j][k].sl[r];
+                        differences[to_minim][i][j][k].sl[r] = atomic[to_minim][i][j][k].sl[r];
                     }
                 }
             }
@@ -1291,69 +1295,71 @@ void get_differences_restart(struct Job job, struct CharPair mol_nums[job.molecu
 
 void energy_minimisation(struct Job job,
                          struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
-                         struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
-                         int to_minim, struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number], struct Bond bonds[job.max_mol_length], int num_bonds, struct Data exp_data[job.scattering_data_number][job.max_data_length], struct Data sim_data[job.scattering_data_number][job.max_data_length], int data_lengths[job.scattering_data_number], double *gbest_chisq)
+                         struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                         struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number], struct Bond bonds[job.max_mol_length], int num_bonds, struct Data exp_data[job.scattering_data_number][job.max_data_length], struct Data sim_data[job.scattering_data_number][job.max_data_length], int data_lengths[job.scattering_data_number])
 {
     struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
     struct Atom old_atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
 
     convert_to_atomic(job, mol_nums, population, mol_lengths, atomic, differences);
-    int num_atoms = 0;
-    int i;
-    for (i = 0; i < job.molecule_types_number; i++)
+    int p;
+    for (p = 0; p < job.population_per_core; p++)
     {
-        num_atoms += atoi(mol_nums[i].keyword) * mol_lengths[i];
-    }
-    int count;
-    float old_force = 0;
-    float old_energy = 100000;
-    float total_energy = 0;
+        int num_atoms = 0;
+        int i;
+        for (i = 0; i < job.molecule_types_number; i++)
+        {
+            num_atoms += atoi(mol_nums[i].keyword) * mol_lengths[i];
+        }
+        int count;
+        float old_force = 0;
+        float old_energy = 100000;
+        float total_energy = 0;
 
-    double hn = 0.001;
-    float total_force = 1000000;
-    int count_bad = 0;
-    while (abs(old_force - total_force) > 0.1)
-    {
-        old_force = total_force;
-        old_energy = total_energy;
-        total_force = 0;
-        total_energy = 0;
-        float force_x[num_atoms], force_y[num_atoms], force_z[num_atoms];
-        for (i = 0; i < num_atoms; i++)
+        double hn = 0.001;
+        float total_force = 1000000;
+        int count_bad = 0;
+        while (abs(old_force - total_force) > 0.1)
         {
-            force_x[i] = 0;
-            force_y[i] = 0;
-            force_z[i] = 0;
-        }
-        get_energy(job, atomic, to_minim, mol_nums, mol_lengths, bonds, num_bonds, num_atoms, force_x, force_y, force_z, &total_energy, &total_force);
-        if (old_energy < total_energy)
-        {
-            hn = 0.2 * hn;
-            old_force = total_force + 100;
-            count_bad += 1;
-            if (count_bad > 10)
+            old_force = total_force;
+            old_energy = total_energy;
+            total_force = 0;
+            total_energy = 0;
+            float force_x[num_atoms], force_y[num_atoms], force_z[num_atoms];
+            for (i = 0; i < num_atoms; i++)
             {
-                printf("danger\n");
-                break;
+                force_x[i] = 0;
+                force_y[i] = 0;
+                force_z[i] = 0;
             }
+            get_energy(job, atomic, p, mol_nums, mol_lengths, bonds, num_bonds, num_atoms, force_x, force_y, force_z, &total_energy, &total_force);
+            if (old_energy < total_energy)
+            {
+                hn = 0.2 * hn;
+                old_force = total_force + 100;
+                count_bad += 1;
+                if (count_bad > 10)
+                {
+                    printf("danger\n");
+                    break;
+                }
+            }
+            else
+            {
+                hn = 1.2 * hn;
+            }
+            move(job, atomic, p, mol_nums, mol_lengths, num_atoms, force_x, force_y, force_z, hn);
         }
-        else
-        {
-            hn = 1.2 * hn;
-        }
-        move(job, atomic, to_minim, mol_nums, mol_lengths, num_atoms, force_x, force_y, force_z, hn);
+        //printf("%f %f %f\n", total_energy, total_force, hn);
+        get_differences_restart(job, mol_nums, mol_lengths, differences, p, atomic);
     }
-    printf("%f %f %f\n", total_energy, total_force, hn);
-    get_differences_restart(job, mol_nums, mol_lengths, differences, to_minim, atomic);
-    diffraction_calculator(job, atomic[to_minim], exp_data, sim_data, data_lengths, mol_nums, mol_lengths);
-    *gbest_chisq = get_chisq(job, exp_data, sim_data, data_lengths);
 }
 
 void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number][job.max_mol_num],
                   struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
                   int mol_lengths[job.molecule_types_number], double *gbest_chisq, int n_procs,
                   float all_chi_sq[n_procs][job.population_per_core], int rank, MPI_Comm comm,
-                  struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length],
+                  struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
                   struct CharPair mol_nums[job.molecule_types_number], int iter, struct Bond bonds[job.max_mol_length], int num_bonds, struct Data exp_data[job.scattering_data_number][job.max_data_length], struct Data sim_data[job.scattering_data_number][job.max_data_length], int data_lengths[job.scattering_data_number])
 {
     int best[2];
@@ -1405,13 +1411,10 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
     {
         if (rank == 0)
         {
-            energy_minimisation(job, population, differences, best[1], mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths, gbest_chisq);
-            printf("%d %d %d %f %f adnrew\n", iter, best[0], best[1], all_chi_sq[best[0]][best[1]], *gbest_chisq);
             write_to_xyz(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
             write_to_fit(job, population, differences, mol_nums, mol_lengths, best[1], 0, iter);
         }
     }
-    MPI_Bcast(differences, job.molecule_types_number*job.max_mol_num*job.max_mol_length*6, MPI_FLOAT, 0, comm);
 }
 
 void get_atom_positions_restart(struct Job job,
@@ -1553,7 +1556,7 @@ int main(int argc, char *argv[])
     get_data_points(job, exp_data, data_types);
 
     struct Atom molecules[job.molecule_types_number][job.max_mol_length];
-    struct Atom differences[job.molecule_types_number][job.max_mol_num][job.max_mol_length];
+    struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length];
     struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num];
     struct Bond bonds[job.max_mol_length];
     int num_bonds;
@@ -1585,6 +1588,7 @@ int main(int argc, char *argv[])
     int i;
     for (i = 0; i < job.steps_number; i++)
     {
+        energy_minimisation(job, population, differences, mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths);
         float chi_sq[job.population_per_core];
         analyse(job, population, mol_nums, mol_lengths, differences, exp_data, sim_data, data_lengths, chi_sq);
 

@@ -9,7 +9,7 @@ cell1;82.15
 cell2;82.15
 num_data;1
 data0;sans2d.txt
-pop_size;32
+pop_size;16
 num_steps;5000
 phi0;0.1
 phi1;0.1
