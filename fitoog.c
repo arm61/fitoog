@@ -1319,7 +1319,7 @@ void energy_minimisation(struct Job job,
         double hn = 0.001;
         float total_force = 1000000;
         int count_bad = 0;
-        while (abs(old_force - total_force) > 0.1)
+        while (abs(total_force) > 1000 && count_bad < 100)
         {
             old_force = total_force;
             old_energy = total_energy;
@@ -1337,20 +1337,19 @@ void energy_minimisation(struct Job job,
             {
                 hn = 0.2 * hn;
                 old_force = total_force + 100;
-                count_bad += 1;
-                if (count_bad > 10)
-                {
-                    printf("danger\n");
-                    break;
-                }
             }
             else
             {
                 hn = 1.2 * hn;
             }
             move(job, atomic, p, mol_nums, mol_lengths, num_atoms, force_x, force_y, force_z, hn);
+            count_bad += 1;
+            if (count_bad == 9999)
+            {
+                printf("danger");
+            }
+            //printf("%f %f %d\n", total_energy, total_force, p);
         }
-        //printf("%f %f %f\n", total_energy, total_force, hn);
         get_differences_restart(job, mol_nums, mol_lengths, differences, p, atomic);
     }
 }
