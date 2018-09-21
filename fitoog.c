@@ -1293,6 +1293,74 @@ void get_differences_restart(struct Job job, struct CharPair mol_nums[job.molecu
     }
 }
 
+void update_pop(struct Job job, struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
+                struct CharPair mol_nums[job.molecule_types_number], int mol_lengths[job.molecule_types_number], struct Atom atomic[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length])
+{
+    int i;
+    for (i = 0; i < job.population_per_core; i++)
+    {
+      int j;
+      for(j = 0; j < job.molecule_types_number; j++)
+      {
+          int k;
+          for (k = 0; k < atoi(mol_nums[j].keyword); k++)
+          {
+              if (mol_lengths[j] > 1)
+              {
+                  int l;
+                  for(l = 0; l < 3; l++)
+                  {
+                      population[i][j][k].position[l] = 0.;
+                  }
+                  for(l = 0; l < mol_lengths[j]; l++)
+                  {
+                      population[i][j][k].position[0] += atomic[i][j][k][l].x;
+                      population[i][j][k].position[1] += atomic[i][j][k][l].y;
+                      population[i][j][k].position[2] += atomic[i][j][k][l].z;
+                  }
+                  for(l = 0; l < 3; l++)
+                  {
+                      population[i][j][k].position[l] /= mol_lengths[j];
+                  }
+              }
+              else
+              {
+                population[i][j][k].position[0] = atomic[i][j][k][0].x;
+                population[i][j][k].position[1] = atomic[i][j][k][0].y;
+                population[i][j][k].position[2] = atomic[i][j][k][0].z;
+              }
+          }
+      }
+    }
+    for (i = 0; i < job.population_per_core; i++)
+    {
+      int j;
+      for(j = 0; j < job.molecule_types_number; j++)
+      {
+          int k;
+          for (k = 0; k < atoi(mol_nums[j].keyword); k++)
+          {
+            if (mol_lengths[j] > 1)
+            {
+              int l;
+                for(l = 0; l < mol_lengths[j]; l++)
+                {
+                  atomic[i][j][k][l].x -= population[i][j][k].position[0];
+                  atomic[i][j][k][l].y -= population[i][j][k].position[1];
+                  atomic[i][j][k][l].z -= population[i][j][k].position[2];
+                }
+            }
+            else
+            {
+              population[i][j][k].angle[0] = 0.;
+              population[i][j][k].angle[1] = 0.;
+              population[i][j][k].angle[2] = 0.;
+            }
+          }
+        }
+      }
+}
+
 void energy_minimisation(struct Job job,
                          struct PosAng population[job.population_per_core][job.molecule_types_number][job.max_mol_num],
                          struct Atom differences[job.population_per_core][job.molecule_types_number][job.max_mol_num][job.max_mol_length],
@@ -1352,6 +1420,7 @@ void energy_minimisation(struct Job job,
         }
         get_differences_restart(job, mol_nums, mol_lengths, differences, p, atomic);
     }
+    update_pop(job, population, mol_nums, mol_lengths, atomic);
 }
 
 void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number][job.max_mol_num],
@@ -1522,10 +1591,10 @@ void get_bonds(struct Job job, struct CharPair mol_types[job.molecule_types_numb
 
 int main(int argc, char *argv[])
 {
-    double t1, t2;
-    t1 = MPI_Wtime();
     int rank, n_procs;
     MPI_Comm comm = mpstart(&n_procs, &rank);
+    double t1, t2;
+    t1 = MPI_Wtime();
     srand(rank + 1 * time(NULL));
 
     struct Job job;
