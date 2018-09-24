@@ -1427,7 +1427,7 @@ void energy_minimisation(struct Job job,
             }
             move(job, atomic, p, mol_nums, mol_lengths, num_atoms, force_x, force_y, force_z, hn);
             count_bad += 1;
-            if (count_bad == 9999)
+            if (count_bad == 99)
             {
                 printf("danger");
             }
