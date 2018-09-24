@@ -1402,7 +1402,7 @@ void energy_minimisation(struct Job job,
         double hn = 0.001;
         float total_force = 1000000;
         int count_bad = 0;
-        while (abs(total_force) > 1000 && count_bad < 100000)
+        while (abs(total_force) > 100000 && count_bad < 100000)
         {
             old_force = total_force;
             old_energy = total_energy;
