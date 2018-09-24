@@ -1349,15 +1349,21 @@ void update_pop(struct Job job, struct PosAng population[job.population_per_core
                 atomic[i][j][k][l].y -= population[i][j][k].position[1];
                 atomic[i][j][k][l].z -= population[i][j][k].position[2];
               }
-              float x1[3];
+              float x1[3], c[3], chat[3];
               x1[0] = atomic[i][j][k][0].x - atomic[i][j][k][mol_lengths[j]-1].x;
               x1[1] = atomic[i][j][k][0].y - atomic[i][j][k][mol_lengths[j]-1].y;
               x1[2] = atomic[i][j][k][0].z - atomic[i][j][k][mol_lengths[j]-1].z;
               float mag = sqrt(x1[0] * x1[0] + x1[1] * x1[1] + x1[2] * x1[2]) * sqrt(3);
               float theta = acos((x1[0] + x1[1] + x1[2]) / mag);
-              population[i][j][k].angle[1] = acos(cos(theta) + x1[2] * x1[2] * (1 - cos(theta)));
-              population[i][j][k].angle[2] = asin((x1[2] * x1[1] * (1 - cos(theta)) + x1[0] * sin(theta)) / sin(population[i][j][k].angle[1]));
-              population[i][j][k].angle[0] = asin((x1[1] * x1[2] * (1 - cos(theta)) - x1[0] * sin(theta)) / sin(population[i][j][k].angle[1]));
+              c[0] = x1[1] - x1[2];
+              c[1] = x1[0] - x1[2];
+              c[2] = x1[0] - x1[1];
+              chat[0] = c[0] / sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
+              chat[1] = c[1] / sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
+              chat[2] = c[2] / sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
+              population[i][j][k].angle[1] = acos(cos(theta) + chat[2] * chat[2] * (1 - cos(theta)));
+              population[i][j][k].angle[2] = asin((chat[2] * chat[1] * (1 - cos(theta)) + chat[0] * sin(theta)) / sin(population[i][j][k].angle[1]));
+              population[i][j][k].angle[0] = asin((chat[1] * chat[2] * (1 - cos(theta)) - chat[0] * sin(theta)) / sin(population[i][j][k].angle[1]));
             }
             else
             {
