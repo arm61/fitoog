@@ -1343,12 +1343,21 @@ void update_pop(struct Job job, struct PosAng population[job.population_per_core
             if (mol_lengths[j] > 1)
             {
               int l;
-                for(l = 0; l < mol_lengths[j]; l++)
-                {
-                  atomic[i][j][k][l].x -= population[i][j][k].position[0];
-                  atomic[i][j][k][l].y -= population[i][j][k].position[1];
-                  atomic[i][j][k][l].z -= population[i][j][k].position[2];
-                }
+              for(l = 0; l < mol_lengths[j]; l++)
+              {
+                atomic[i][j][k][l].x -= population[i][j][k].position[0];
+                atomic[i][j][k][l].y -= population[i][j][k].position[1];
+                atomic[i][j][k][l].z -= population[i][j][k].position[2];
+              }
+              float x1[3];
+              x1[0] = atomic[i][j][k][0].x - atomic[i][j][k][mol_lengths[j]-1].x;
+              x1[1] = atomic[i][j][k][0].y - atomic[i][j][k][mol_lengths[j]-1].y;
+              x1[2] = atomic[i][j][k][0].z - atomic[i][j][k][mol_lengths[j]-1].z;
+              float mag = sqrt(x1[0] * x1[0] + x1[1] * x1[1] + x1[2] * x1[2]) * sqrt(3);
+              float theta = acos((x1[0] + x1[1] + x1[2]) / mag);
+              population[i][j][k].angle[1] = acos(cos(theta) + x1[2] * x1[2] * (1 - cos(theta)));
+              population[i][j][k].angle[2] = asin((x1[2] * x1[1] * (1 - cos(theta)) + x1[0] * sin(theta)) / sin(population[i][j][k].angle[1]));
+              population[i][j][k].angle[0] = asin((x1[1] * x1[2] * (1 - cos(theta)) - x1[0] * sin(theta)) / sin(population[i][j][k].angle[1]));
             }
             else
             {
