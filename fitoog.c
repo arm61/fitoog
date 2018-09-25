@@ -39,6 +39,7 @@ struct Bond
     int molecule_index;
     int a;
     int b;
+    float r;
 };
 
 struct Job
@@ -1061,8 +1062,9 @@ void get_energy(struct Job job, struct Atom atomic[job.population_per_core][job.
                     for (l = 0; l < num_bonds; l++)
                     {
                         if (bonds[l].molecule_index == i && bonds[l].a == k && bonds[l].b == k2){
-                            float energy = 0.0020757 * 0.5 * pow((d - 4.7), 2);
-                            float force = 0.0020757  * (d - 4.7);
+                          float r = bonds[l].r;
+                            float energy = 0.0020757 * 0.5 * pow((d - r), 2);
+                            float force = 0.0020757  * (d - r);
                             *total_energy += energy;
                             *total_force += force;
                             force_x[kk] += force * dx / d;
@@ -1363,7 +1365,6 @@ void update_pop(struct Job job, struct PosAng population[job.population_per_core
               float mag = sqrt(x1[0] * x1[0] + x1[1] * x1[1] + x1[2] * x1[2]);
               population[i][j][k].angle[0] = acos(x1[2] / mag);
               population[i][j][k].angle[1] = acos(x1[0] / mag);
-              printf("%f %f %f %f %f\n", population[i][j][k].angle[0], population[i][j][k].angle[1], mag, x1[0], x1[2]);
             }
             else
             {
@@ -1598,6 +1599,10 @@ void get_bonds(struct Job job, struct CharPair mol_types[job.molecule_types_numb
             if (j == 2)
             {
                 bonds[i].b = atoi(str);
+            }
+            if (j == 3)
+            {
+              bonds[i].r = atof(str);
             }
             j++;
             str = strtok(NULL, ";");
