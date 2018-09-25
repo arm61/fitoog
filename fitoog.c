@@ -141,6 +141,7 @@ void read_input_file(struct Job *job)
             strncpy(job->name, wipe, 50);
             strncpy(job->name, first_char_after_space(line), 50);
             strcat(job->name, "\0");
+            printf("%s\n", job->name);
         }
         found = find_word_in_line(line, "num_molecules");
         if(found != NULL)
