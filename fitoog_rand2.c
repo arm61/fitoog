@@ -1692,6 +1692,8 @@ int main(int argc, char *argv[])
         update_pbest(job, pbest, population, mol_lengths, pbest_chisq, chi_sq);
         update_gbest(job, gbest, population, mol_lengths, &gbest_chisq, n_procs, all_chi_sq, rank, comm, differences,
                      mol_nums, i, bonds, num_bonds, exp_data, sim_data, data_lengths);
+        build_population(job, population, mol_nums);
+
         //integrator(job, n_procs, rank, population, pbest, gbest, mol_lengths, velocity);
     }
 
