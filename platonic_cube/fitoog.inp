@@ -1,0 +1,13 @@
+name;testing
+num_molecules;1
+molecule0;cta_fake.fit
+num_mole0;4
+cell0;30
+cell1;30
+cell2;30
+num_data;1
+data0;fake_data.txt
+pop_size;2560
+num_steps;5000
+phi0;0.8
+phi1;0.4

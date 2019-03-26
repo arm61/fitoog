@@ -15,7 +15,7 @@
 struct PosAng
 {
     float position[3];
-    float angle[2];
+    float angle[3];
 };
 
 struct CharPair
@@ -130,7 +130,7 @@ void read_input_file(struct Job *job)
     char *found;
     char temp[50];
     const char wipe[50] = "                                                  ";
-    job->golden_vectors = 30;
+    job->golden_vectors = 100;
     job->restart = 0;
     job->steps_number = 10;
     while(fgets(line, sizeof(line), input_file))
@@ -499,23 +499,36 @@ void build_population(struct Job job,
             int k;
             for (k = 0; k < atoi(mol_nums[j].keyword); k++)
             {
+                    if (j == 0 && k == 0)
+                    {
+                      population[i][j][k].position[0] = 0;
+                      population[i][j][k].position[1] = 0;
+                      population[i][j][k].position[2] = 0;
+                      population[i][j][k].angle[0] = 0;
+                      population[i][j][k].angle[1] = 0;
+                      population[i][j][k].angle[2] = 0;
+                    }
+                    else
+                    {
                     population[i][j][k].position[0] = rand_float(job.cell[0], 0.);
                     population[i][j][k].position[1] = rand_float(job.cell[1], 0.);
                     population[i][j][k].position[2] = rand_float(job.cell[2], 0.);
                     population[i][j][k].angle[0] = rand_float(2 * PI, 0.);
                     population[i][j][k].angle[1] = rand_float(2 * PI, 0.);
+                    population[i][j][k].angle[2] = rand_float(2 * PI, 0.);
+                  }
             }
         }
     }
 }
 
 
-void rotation_matrix(float a, float b, float rm[3][3])
+void rotation_matrix(float a, float b, float c, float rm[3][3])
 {
   float l = sin(a) * cos(b);
   float m = sin(a) * sin(b);
   float n = cos(a);
-  float k = PI;
+  float k = c;
     rm[0][0] = l * l + (m * m + n * n) * cos(k);
     rm[0][1] = l * m * (1 - cos(k)) - n * sin(k);
     rm[0][2] = n * l * (1 - cos(k)) + m * sin(k);
@@ -543,7 +556,7 @@ void convert_to_atomic(struct Job job, struct CharPair mol_nums[job.molecule_typ
             for (k = 0; k < atoi(mol_nums[j].keyword); k++)
             {
                 float rm[3][3];
-                rotation_matrix(population[i][j][k].angle[0], population[i][j][k].angle[1], rm);
+                rotation_matrix(population[i][j][k].angle[0], population[i][j][k].angle[1], population[i][j][k].angle[2], rm);
                 int l;
                 for (l = 0; l < mol_lengths[j]; l++)
                 {
@@ -691,8 +704,7 @@ void normalise(struct Job job, struct Data exp_data[job.scattering_data_number][
                struct Data sim_data[job.scattering_data_number][job.max_data_length],
                int data_lengths[job.scattering_data_number], int i)
 {
-    int random = rand() % data_lengths[i];
-    float norm = exp_data[i][random].i / sim_data[i][random].i;
+    float norm = exp_data[i][0].i / sim_data[i][0].i;
     int j;
     for (j = 0; j < data_lengths[i]; j++)
     {
@@ -711,46 +723,61 @@ void diffraction_calculator(struct Job job,
     int i;
     for (i = 0; i < job.scattering_data_number; i++)
     {
-        int q;
-        for (q = 0; q < data_lengths[i]; q++)
+      int count = 0;
+      float b[job.molecule_types_number * job.max_mol_num * job.max_mol_length];
+      float x[job.molecule_types_number * job.max_mol_num * job.max_mol_length];
+      float y[job.molecule_types_number * job.max_mol_num * job.max_mol_length];
+      float z[job.molecule_types_number * job.max_mol_num * job.max_mol_length];
+      int j;
+      for (j = 0; j < job.molecule_types_number; j++)
+      {
+          int k;
+          for (k = 0; k < atoi(mol_nums[j].keyword); k++)
+          {
+              int l;
+              for (l = 0; l < mol_lengths[j]; l++)
+              {
+                b[count] = atomic[j][k][l].sl[i];
+                x[count] = atomic[j][k][l].x;
+                y[count] = atomic[j][k][l].y;
+                z[count] = atomic[j][k][l].z;
+                count += 1;
+              }
+          }
+      }
+      int n = ((count - 1) * count / 2);
+      float r[n];
+      float bij[n];
+      int count2 = 0;
+      for (j = 0; j < count-1; j++)
+      {
+        int k;
+        for (k = j+1; k < count; k++)
         {
-            float sum_int = 0.;
-            float k_min = (-1. * ((float) job.golden_vectors - 1.)) / 2.;
-            float k_max = ((float) job.golden_vectors - 1.) / 2.;
-            float a;
-            for (a = k_min; a < (k_max + 1); a += 1)
-            {
-                float qx = exp_data[i][q].q * cos(asin((2. * a) / (float) job.golden_vectors)) * cos((2. * PI * a) / (PHI));
-                float qy = exp_data[i][q].q * cos(asin((2. * a) / (float) job.golden_vectors)) * sin((2. * PI * a) / (PHI));
-                float qz = (2. * a * exp_data[i][q].q) / (float) job.golden_vectors;
-                float sum_coss = 0.;
-                float sum_sinn = 0.;
-                int j;
-                for (j = 0; j < job.molecule_types_number; j++)
-                {
-                    int k;
-                    for (k = 0; k < atoi(mol_nums[j].keyword); k++)
-                    {
-                        int l;
-                        for (l = 0; l < mol_lengths[j]; l++)
-                        {
-                            float dot = qx * atomic[j][k][l].x + qy * atomic[j][k][l].y + qz * atomic[j][k][l].z;
-                            float coss = atomic[j][k][l].sl[i] * cos(dot);
-                            float sinn = atomic[j][k][l].sl[i] * sin(dot);
-                            sum_coss += coss;
-                            sum_sinn += sinn;
-                        }
-                        float sq_coss = sum_coss * sum_coss;
-                        float sq_sinn = sum_sinn * sum_sinn;
-                        sum_int += (sq_coss + sq_sinn);
-                    }
-                }
-            }
-            float inten = sum_int / (float) job.golden_vectors;
-            sim_data[i][q].i = inten;
-            sim_data[i][q].q = exp_data[i][q].q;
+          float xdist = x[j] - x[k];
+          float ydist = y[j] - y[k];
+          float zdist = z[j] - z[k];
+          r[count2] = sqrt(xdist * xdist + ydist * ydist + zdist * zdist);
+          bij[count2] = b[j] * b[k];
+          count2 += 1;
         }
-        normalise(job, exp_data, sim_data, data_lengths, i);
+      }
+      int q;
+      for (q = 0; q < data_lengths[i]; q++)
+      {
+        float inten = 0;
+        for (j = 0; j < count2; j++)
+        {
+          inten += bij[j] * sin(r[j] * exp_data[i][q].q) / (r[j] * exp_data[i][q].q);
+        }
+        if (inten < 0)
+        {
+          inten = 0;
+        }
+        sim_data[i][q].i = inten;
+        sim_data[i][q].q = exp_data[i][q].q;
+      }
+      normalise(job, exp_data, sim_data, data_lengths, i);
     }
 }
 
@@ -874,11 +901,24 @@ void initialise_velocities(struct Job job,
             int k;
             for (k = 0; k < mol_lengths[j]; k++)
             {
-                  velocity[i][j][k].position[0] = rand_float(1., 0.);
-                  velocity[i][j][k].position[1] = rand_float(1., 0.);
-                    velocity[i][j][k].position[2] = rand_float(1., 0.);
-                    velocity[i][j][k].angle[0] = rand_float(1., 0.);
-                    velocity[i][j][k].angle[1] = rand_float(1., 0.);
+              if (j == 0 && k == 0)
+              {
+                velocity[i][j][k].position[0] = 0;
+                velocity[i][j][k].position[1] = 0;
+                velocity[i][j][k].position[2] = 0;
+                velocity[i][j][k].angle[0] = 0;
+                velocity[i][j][k].angle[1] = 0;
+                velocity[i][j][k].angle[2] = 0;
+              }
+              else{
+
+                  velocity[i][j][k].position[0] = rand_float(job.cell[0], 0.) * 0.1;
+                  velocity[i][j][k].position[1] = rand_float(job.cell[1], 0.) * 0.1;
+                  velocity[i][j][k].position[2] = rand_float(job.cell[2], 0.) * 0.1;
+                  velocity[i][j][k].angle[0] = rand_float(PI, 0.) * 0.1;
+                  velocity[i][j][k].angle[1] = rand_float(PI, 0.) * 0.1;
+                  velocity[i][j][k].angle[2] = rand_float(PI, 0.) * 0.1;
+                }
             }
         }
     }
@@ -899,11 +939,14 @@ void integrator(struct Job job, int n_procs, int rank,
               int l;
               for (l = 0; l < 3; l++)
               {
-                velocity[i][j][k].position[l] = velocity[i][j][k].position[l] + (rand_float(job.phi[0], 0.0) * (pbest[i][j][k].position[l] - population[i][j][k].position[l])) + (rand_float(job.phi[1], 0.0) * (gbest[j][k].position[l] - population[i][j][k].position[l]));
-              }
-              for (l = 0; l < 2; l++)
-              {
-                velocity[i][j][k].angle[l] = velocity[i][j][k].angle[l] + (rand_float(job.phi[0], 0.0) * (pbest[i][j][k].angle[l] - population[i][j][k].angle[l])) + (rand_float(job.phi[1], 0.0) * (gbest[j][k].angle[l] - population[i][j][k].angle[l]));
+                if (j == 0 && k == 0)
+                {
+                  velocity[i][j][k].position[l] = 0;
+                  velocity[i][j][k].angle[l] = 0;
+                }
+                else{
+                velocity[i][j][k].position[l] = rand_float(0.9, 0.4) * velocity[i][j][k].position[l] + (rand_float(job.phi[0], 0.0) * (pbest[i][j][k].position[l] - population[i][j][k].position[l])) + (rand_float(job.phi[1], 0.0) * (gbest[j][k].position[l] - population[i][j][k].position[l]));
+                velocity[i][j][k].angle[l] = rand_float(0.9, 0.4) * velocity[i][j][k].angle[l] + (rand_float(job.phi[0], 0.0) * (pbest[i][j][k].angle[l] - population[i][j][k].angle[l])) + (rand_float(job.phi[1], 0.0) * (gbest[j][k].angle[l] - population[i][j][k].angle[l]));}
               }
             }
         }
@@ -916,12 +959,17 @@ void integrator(struct Job job, int n_procs, int rank,
                 int l;
                 for (l = 0; l < 3; l++) {
                     population[i][j][k].position[l] = population[i][j][k].position[l] + velocity[i][j][k].position[l];
+                    //if (population[i][j][k].position[l] > job.cell[l])
+                    //{
+                    //  population[i][j][k].position[l] = population[i][j][k].position[l] - 3 * velocity[i][j][k].position[l];
+                    //}
+                    //if (population[i][j][k].position[l] <= 0)
+                    //{
+                    //  population[i][j][k].position[l] = population[i][j][k].position[l] - 3 * velocity[i][j][k].position[l];
+                    //}
                     population[i][j][k].position[l] = fabs(fmod(population[i][j][k].position[l], job.cell[l]));
-                }
-                for (l = 0; l < 2; l++)
-                {
-                  population[i][j][k].angle[l] = population[i][j][k].angle[l] + velocity[i][j][k].angle[l];
-                  population[i][j][k].angle[l] = fabs(fmod(population[i][j][k].angle[l], (2. * PI)));
+                    population[i][j][k].angle[l] = population[i][j][k].angle[l] + velocity[i][j][k].angle[l];
+                    population[i][j][k].angle[l] = fabs(fmod(population[i][j][k].angle[l], (2. * PI)));
                 }
             }
         }
@@ -948,11 +996,8 @@ void initialise_best(struct Job job,
                 int l;
                 for (l = 0; l < 3; l++) {
                     pbest[i][j][k].position[l] = population[i][j][k].position[l];
+                    pbest[i][j][k].angle[l] = population[i][j][k].angle[l];
                 }
-                for (l = 0; l < 2; l++) {
-                  pbest[i][j][k].angle[l] = population[i][j][k].angle[l];
-                }
-
             }
         }
     }
@@ -966,10 +1011,7 @@ void initialise_best(struct Job job,
             int l;
             for (l = 0; l < 3; l++) {
                 gbest[j][k].position[l] = 0.;
-            }
-            for (l = 0; l < 2; l++)
-            {
-              gbest[j][k].angle[l] = 0.;
+                gbest[j][k].angle[l] = 0.;
             }
         }
     }
@@ -993,10 +1035,7 @@ void update_pbest(struct Job job,
                     int l;
                     for (l = 0; l < 3; l++) {
                         pbest[i][j][k].position[l] = population[i][j][k].position[l];
-                    }
-                    for (l = 0; l < 2; l++)
-                    {
-                      pbest[i][j][k].angle[l] = population[i][j][k].angle[l];
+                        pbest[i][j][k].angle[l] = population[i][j][k].angle[l];
                     }
                 }
             }
@@ -1436,7 +1475,7 @@ void energy_minimisation(struct Job job,
         }
         get_differences_restart(job, mol_nums, mol_lengths, differences, p, atomic);
     }
-    update_pop(job, population, mol_nums, mol_lengths, atomic);
+    //update_pop(job, population, mol_nums, mol_lengths, atomic);
 }
 
 void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number][job.max_mol_num],
@@ -1451,14 +1490,14 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
     float storage2;
     if (rank == 0){
         best_chi_sq(job, n_procs, all_chi_sq, best, gbest_chisq);
-        printf("%d %d %d %f %f drew\n", iter, best[0], best[1], all_chi_sq[best[0]][best[1]], *gbest_chisq);
+        printf("%d %d %d %eE %eE drew\n", iter, best[0], best[1], all_chi_sq[best[0]][best[1]], *gbest_chisq);
         storage = *gbest_chisq;
         storage2 = all_chi_sq[best[0]][best[1]];
     }
     MPI_Bcast(&best, 2, MPI_INT, 0, comm);
     MPI_Bcast(&storage, 1, MPI_FLOAT, 0, comm);
     MPI_Bcast(&storage2, 1, MPI_FLOAT, 0, comm);
-    float best_of_pop[job.molecule_types_number][job.max_mol_num][5];
+    float best_of_pop[job.molecule_types_number][job.max_mol_num][6];
     if (rank == best[0])
     {
         int i;
@@ -1471,15 +1510,12 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
               for (k = 0; k < 3; k++)
               {
                 best_of_pop[i][j][k] = population[best[1]][i][j].position[k];
-              }
-              for (k = 0; k < 2; k++)
-              {
                 best_of_pop[i][j][k+3] = population[best[1]][i][j].angle[k];
               }
             }
         }
     }
-    MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 5, MPI_FLOAT, best[0], comm);
+    MPI_Bcast(&best_of_pop, job.molecule_types_number * job.max_mol_num * 6, MPI_FLOAT, best[0], comm);
     int i;
     for (i = 0; i < job.molecule_types_number; i++)
     {
@@ -1490,9 +1526,6 @@ void update_gbest(struct Job job, struct PosAng gbest[job.molecule_types_number]
             for (k = 0; k < 3; k++)
             {
               gbest[i][j].position[k] = best_of_pop[i][j][k];
-            }
-            for (k = 0; k < 2; k++)
-            {
               gbest[i][j].angle[k] = best_of_pop[i][j][k + 3];
             }
         }
@@ -1682,10 +1715,32 @@ int main(int argc, char *argv[])
     int i;
     for (i = 0; i < job.steps_number; i++)
     {
-        energy_minimisation(job, population, differences, mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths);
+        //energy_minimisation(job, population, differences, mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths);
         float chi_sq[job.population_per_core];
         analyse(job, population, mol_nums, mol_lengths, differences, exp_data, sim_data, data_lengths, chi_sq);
 
+        float random_i = rand_float(1, 0);
+        if (random_i > 0.95)
+        {
+          int which_core = rand_float(n_procs-1, 0);
+          if (rank == which_core){
+            printf("rand\n");
+          int aa = rand_float(job.population_per_core-1, 0);
+          int bb = rand_float(job.molecule_types_number-1, 0);
+          int cc = rand_float(mol_lengths[bb]-1, 0);
+          population[aa][bb][cc].position[0] = rand_float(job.cell[0], 0);
+          population[aa][bb][cc].position[1] = rand_float(job.cell[1], 0);
+          population[aa][bb][cc].position[2] = rand_float(job.cell[2], 0);
+          population[aa][bb][cc].angle[0] = rand_float(2 * PI, 0);
+          population[aa][bb][cc].angle[1] = rand_float(2 * PI, 0);
+          population[aa][bb][cc].angle[2] = rand_float(2 * PI, 0);
+          velocity[aa][bb][cc].position[0] = rand_float(job.cell[0], 0) * 0.1;
+          velocity[aa][bb][cc].position[1] = rand_float(job.cell[1], 0) * 0.1;
+          velocity[aa][bb][cc].position[2] = rand_float(job.cell[2], 0) * 0.1;
+          velocity[aa][bb][cc].angle[0] = rand_float(2 * PI, 0) * 0.1;
+          velocity[aa][bb][cc].angle[1] = rand_float(2 * PI, 0) * 0.1;
+          velocity[aa][bb][cc].angle[2] = rand_float(2 * PI, 0) * 0.1;}
+        }
         float all_chi_sq[n_procs][job.population_per_core];
         MPI_Gather(chi_sq, job.population_per_core, MPI_FLOAT, all_chi_sq, job.population_per_core, MPI_FLOAT, 0, comm);
 
