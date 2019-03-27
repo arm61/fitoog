@@ -47,6 +47,7 @@ struct Job
     char name[50];
     int molecule_types_number;
     int restart;
+    int em;
     float cell[3];
     int scattering_data_number;
     int golden_vectors;
@@ -57,6 +58,7 @@ struct Job
     int max_mol_length;
     int max_mol_num;
     float phi[2];
+    float rand;
     int print_freq;
     FILE *restart_file;
     int em_freq;
@@ -132,7 +134,9 @@ void read_input_file(struct Job *job)
     const char wipe[50] = "                                                  ";
     job->golden_vectors = 100;
     job->restart = 0;
+    job->em = 0;
     job->steps_number = 10;
+    job->rand = 0.05;
     while(fgets(line, sizeof(line), input_file))
     {
         found = find_word_in_line(line, "name");
@@ -173,6 +177,11 @@ void read_input_file(struct Job *job)
         {
             job->cell[2] = read_float(line, wipe);
         }
+        found = find_word_in_line(line, "rand");
+        if(found != NULL)
+        {
+            job->rand = read_float(line, wipe);
+        }
         found = find_word_in_line(line, "num_data");
         if(found != NULL)
         {
@@ -198,6 +207,18 @@ void read_input_file(struct Job *job)
             else
             {
                 job->restart = 0;
+            }
+        }
+        found = find_word_in_line(line, "em");
+        if(found != NULL)
+        {
+            if(first_char_after_space(line)[0]=='y')
+            {
+                job->em = 1;
+            }
+            else
+            {
+                job->em = 0;
             }
         }
     }
@@ -1715,12 +1736,15 @@ int main(int argc, char *argv[])
     int i;
     for (i = 0; i < job.steps_number; i++)
     {
-        //energy_minimisation(job, population, differences, mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths);
+        if (job.em == 1)
+        {
+          energy_minimisation(job, population, differences, mol_nums, mol_lengths, bonds, num_bonds, exp_data, sim_data, data_lengths);
+        }
         float chi_sq[job.population_per_core];
         analyse(job, population, mol_nums, mol_lengths, differences, exp_data, sim_data, data_lengths, chi_sq);
 
         float random_i = rand_float(1, 0);
-        if (random_i > 0.95)
+        if (random_i < job.rand)
         {
           int which_core = rand_float(n_procs-1, 0);
           if (rank == which_core){
